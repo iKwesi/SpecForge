@@ -1,0 +1,30 @@
+{
+  "name": "specforge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Specification-driven engineering orchestration CLI",
+  "type": "module",
+  "bin": {
+    "specforge": "dist/cli.js",
+    "sf": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "start": "tsx src/cli.ts"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "commander": "^14.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "tsx": "^4.20.6",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}
