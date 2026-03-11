@@ -8,9 +8,56 @@ The system must meet engineering standards expected from organizations such as O
 
 The implementation must prioritize correctness, determinism, maintainability, operational clarity, trust, and narrow v1 execution.
 
-=====================================================================
-0. V1 PRODUCT INTENT
-=====================================================================
+## Table of Contents
+
+- [0. V1 PRODUCT INTENT](#0-v1-product-intent)
+- [1. ENGINEERING STANDARDS](#1-engineering-standards)
+- [2. REQUIRED V1 SCOPE](#2-required-v1-scope)
+- [3. PROJECT MODES](#3-project-modes)
+- [4. FEATURE-PROPOSAL BEHAVIOR](#4-feature-proposal-behavior)
+- [5. OPEN SOURCE CONTRIBUTION MODE](#5-open-source-contribution-mode)
+- [6. GLOSSARY](#6-glossary)
+- [7. TECH STACK](#7-tech-stack)
+- [8. ARCHITECTURE](#8-architecture)
+- [9. REPOSITORY STRUCTURE](#9-repository-structure)
+- [10. ARTIFACT VERSIONING CONTRACT](#10-artifact-versioning-contract)
+- [10A. CONFIG / POLICY SOURCE OF TRUTH](#10a-config-policy-source-of-truth)
+- [11. IDEA INTERROGATION MODEL](#11-idea-interrogation-model)
+- [12. CONTEXT RETRIEVAL CONTRACT](#12-context-retrieval-contract)
+- [13. SPEC GENERATION](#13-spec-generation)
+- [14. ARCHITECTURE DIAGRAMS](#14-architecture-diagrams)
+- [15. PARALLEL SAFETY MODEL](#15-parallel-safety-model)
+- [16. WORKTREE / WORKSPACE EXECUTION MODEL](#16-worktree-workspace-execution-model)
+- [17. GIT POLICY](#17-git-policy)
+- [18. BRANCHING POLICY](#18-branching-policy)
+- [19. README POLICY](#19-readme-policy)
+- [20. ISSUE TRACKER INTEGRATION](#20-issue-tracker-integration)
+- [21. SKILL CONTRACTS](#21-skill-contracts)
+- [21A. ARTIFACT OWNERSHIP RULES](#21a-artifact-ownership-rules)
+- [22. FRESH-CONTEXT EXECUTION POLICY](#22-fresh-context-execution-policy)
+- [23. RALPH LOOP DEFINITION](#23-ralph-loop-definition)
+- [24. CRITIC DEFINITION](#24-critic-definition)
+- [25. GATE MODEL](#25-gate-model)
+- [26. TDD EXECUTION](#26-tdd-execution)
+- [27. CI POLICY](#27-ci-policy)
+- [28. EXISTING REPOSITORY SUPPORT](#28-existing-repository-support)
+- [29. MINIMAL DIFF POLICY](#29-minimal-diff-policy)
+- [30. COMMIT MESSAGE STANDARD](#30-commit-message-standard)
+- [31. GOLDEN DEMO REPO REQUIREMENT](#31-golden-demo-repo-requirement)
+- [32. CLI UX REQUIREMENTS](#32-cli-ux-requirements)
+- [33. DOCTOR COMMAND](#33-doctor-command)
+- [34. EXPLAIN COMMAND](#34-explain-command)
+- [35. DRY-RUN MODE](#35-dry-run-mode)
+- [36. INSPECT COMMAND](#36-inspect-command)
+- [37. V1 IMPLEMENTATION PHASES](#37-v1-implementation-phases)
+- [38. POST-V1 NEXT PHASES](#38-post-v1-next-phases)
+- [39. FUTURE COMMANDS / ROADMAP](#39-future-commands-roadmap)
+- [40. FUTURE IMPROVEMENTS / PLATFORM ROADMAP](#40-future-improvements-platform-roadmap)
+- [41. CLI COMMANDS](#41-cli-commands)
+- [42. IMPLEMENTATION INSTRUCTIONS](#42-implementation-instructions)
+
+## 0. V1 PRODUCT INTENT
+
 
 SpecForge v1 is a CLI-first, local-first engineering orchestration tool.
 
@@ -29,9 +76,8 @@ Its v1 purpose is to:
 SpecForge v1 is NOT required to fully implement every future platform capability.
 It must instead establish the architecture and contracts needed to support them cleanly.
 
-=====================================================================
-1. ENGINEERING STANDARDS
-=====================================================================
+## 1. ENGINEERING STANDARDS
+
 
 All code must follow professional software engineering practices.
 
@@ -64,9 +110,8 @@ Avoid:
 - invented execution state
 - opaque agent behavior
 
-=====================================================================
-2. REQUIRED V1 SCOPE
-=====================================================================
+## 2. REQUIRED V1 SCOPE
+
 
 The following are REQUIRED in v1:
 
@@ -115,9 +160,8 @@ The following are OPTIONAL for later phases and do not need full v1 implementati
 - risk metric execution and hotspot scoring
 - domain packs
 
-=====================================================================
-3. PROJECT MODES
-=====================================================================
+## 3. PROJECT MODES
+
 
 SpecForge must support four project modes:
 
@@ -135,9 +179,8 @@ SpecForge must support four project modes:
 
 If project mode is not specified, the CLI must prompt for it.
 
-=====================================================================
-4. FEATURE-PROPOSAL BEHAVIOR
-=====================================================================
+## 4. FEATURE-PROPOSAL BEHAVIOR
+
 
 Feature proposals behave differently depending on repository ownership.
 
@@ -165,9 +208,8 @@ For external/open-source repositories:
 The implementation must not use vague phrases like “implement normally.”
 It must explicitly transition to the correct workflow.
 
-=====================================================================
-5. OPEN SOURCE CONTRIBUTION MODE
-=====================================================================
+## 5. OPEN SOURCE CONTRIBUTION MODE
+
 
 When project_mode = contribution:
 
@@ -181,9 +223,8 @@ When project_mode = contribution:
 - keep diffs minimal
 - only modify docs when required by the change
 
-=====================================================================
-6. GLOSSARY
-=====================================================================
+## 6. GLOSSARY
+
 
 Spec Pack
 - the structured engineering artifact set produced by SpecForge
@@ -240,9 +281,8 @@ Risk Metric
 Hotspot
 - a file, module, or function identified as relatively risky to modify due to poor testability, high complexity, high churn, or other quality signals
 
-=====================================================================
-7. TECH STACK
-=====================================================================
+## 7. TECH STACK
+
 
 Primary language: TypeScript (Node.js)
 
@@ -258,9 +298,8 @@ Vercel AI SDK may be used only inside model/backend adapters.
 
 It must not leak into core engine contracts or business logic.
 
-=====================================================================
-8. ARCHITECTURE
-=====================================================================
+## 8. ARCHITECTURE
+
 
 SpecForge must follow layered architecture.
 
@@ -298,9 +337,8 @@ Execution environment abstraction:
 
 Business logic must not exist in Runner.
 
-=====================================================================
-9. REPOSITORY STRUCTURE
-=====================================================================
+## 9. REPOSITORY STRUCTURE
+
 
 /
   .specforge/
@@ -350,9 +388,8 @@ In contribution mode, all generated internal artifacts must stay under `.specfor
 For user-owned repositories, the default artifact layout may use the top-level structure shown above.
 The architecture should allow future support for alternative artifact layouts through config, including `.specforge/`-only storage, without changing core engine contracts.
 
-=====================================================================
-10. ARTIFACT VERSIONING CONTRACT
-=====================================================================
+## 10. ARTIFACT VERSIONING CONTRACT
+
 
 All generated artifacts must include metadata:
 
@@ -371,9 +408,8 @@ Context packs and downstream artifacts must reference specific artifact versions
 
 If a source artifact changes, dependent derived artifacts must be invalidated or regenerated.
 
-=====================================================================
-10A. CONFIG / POLICY SOURCE OF TRUTH
-=====================================================================
+## 10A. CONFIG / POLICY SOURCE OF TRUTH
+
 
 SpecForge behavior must be governed by explicit config/policy artifacts, not hidden defaults.
 
@@ -390,9 +426,8 @@ At minimum, config/policy must control:
 
 Runtime behavior must be explainable from config/policy plus current artifacts.
 
-=====================================================================
-11. IDEA INTERROGATION MODEL
-=====================================================================
+## 11. IDEA INTERROGATION MODEL
+
 
 SpecForge must use the 12-bucket interrogation model.
 
@@ -425,9 +460,8 @@ OR
 Output:
 - idea_brief.json
 
-=====================================================================
-12. CONTEXT RETRIEVAL CONTRACT
-=====================================================================
+## 12. CONTEXT RETRIEVAL CONTRACT
+
 
 SpecForge must implement indexed, provenance-aware retrieval.
 
@@ -448,9 +482,8 @@ Context pack builder rules:
 
 A weak “search and stuff random snippets” implementation is not acceptable.
 
-=====================================================================
-13. SPEC GENERATION
-=====================================================================
+## 13. SPEC GENERATION
+
 
 SpecForge must generate a contract-first Spec Pack including:
 
@@ -471,9 +504,8 @@ Rules:
 - deterministic repair may fix structural issues such as missing references, malformed indexes, or naming inconsistencies
 - deterministic repair must not silently change intended product or architecture meaning
 
-=====================================================================
-14. ARCHITECTURE DIAGRAMS
-=====================================================================
+## 14. ARCHITECTURE DIAGRAMS
+
 
 SpecForge should support Excalidraw-based architecture diagrams.
 
@@ -490,9 +522,8 @@ For v1:
 - diagram generation support is encouraged but may be implemented as optional or minimal if needed to keep v1 sharp
 - the DiagramProvider interface must exist even if generation is initially basic
 
-=====================================================================
-15. PARALLEL SAFETY MODEL
-=====================================================================
+## 15. PARALLEL SAFETY MODEL
+
 
 Tasks may run in parallel only if ALL are true:
 
@@ -520,9 +551,8 @@ Post-merge rules:
 - if a merged task changes a contract or shared mutable asset, affected sibling tasks must be revalidated
 - scheduler must support invalidating or re-planning affected subgraphs
 
-=====================================================================
-16. WORKTREE / WORKSPACE EXECUTION MODEL
-=====================================================================
+## 16. WORKTREE / WORKSPACE EXECUTION MODEL
+
 
 Parallel tasks must run in isolated workspaces.
 
@@ -536,9 +566,8 @@ SpecForge must remain usable without GitButler.
 
 Each task execution workspace must be isolated and cleaned after completion when safe.
 
-=====================================================================
-17. GIT POLICY
-=====================================================================
+## 17. GIT POLICY
+
 
 Preferred Git provider:
 - GitButler CLI
@@ -559,9 +588,8 @@ GitHub operations:
 
 GitButler must be preferred, not mandatory.
 
-=====================================================================
-18. BRANCHING POLICY
-=====================================================================
+## 18. BRANCHING POLICY
+
 
 Branch-based development is required.
 
@@ -575,9 +603,8 @@ Rules:
   - policy gates satisfied
   - eval gates if enabled
 
-=====================================================================
-19. README POLICY
-=====================================================================
+## 19. README POLICY
+
 
 For greenfield, existing-repo, and feature-proposal in user-owned repos:
 
@@ -595,9 +622,8 @@ In contribution mode:
 - only change docs when required by the change
 - keep docs diffs minimal
 
-=====================================================================
-20. ISSUE TRACKER INTEGRATION
-=====================================================================
+## 20. ISSUE TRACKER INTEGRATION
+
 
 Issue tracking must be provider-based.
 
@@ -615,9 +641,8 @@ Core logic must remain provider-agnostic.
 
 If provider-specific linking to GitHub is unavailable, SpecForge must support manual linking/comment updates through the provider adapter.
 
-=====================================================================
-21. SKILL CONTRACTS
-=====================================================================
+## 21. SKILL CONTRACTS
+
 
 Each skill must be defined as a real contract, not just a label.
 
@@ -864,9 +889,8 @@ Outputs:
 - rationale
 - risks
 
-=====================================================================
-21A. ARTIFACT OWNERSHIP RULES
-=====================================================================
+## 21A. ARTIFACT OWNERSHIP RULES
+
 
 To avoid overlapping responsibilities, each artifact class must have a single primary writer skill.
 
@@ -920,9 +944,8 @@ Primary ownership rules:
 No other skill may rewrite an artifact owned by another skill except through an explicit regeneration workflow.
 Cross-skill modifications must occur by producing a new artifact version through the owning skill’s contract.
 
-=====================================================================
-22. FRESH-CONTEXT EXECUTION POLICY
-=====================================================================
+## 22. FRESH-CONTEXT EXECUTION POLICY
+
 
 Every agent invocation and every Ralph-loop iteration must start with fresh context.
 
@@ -935,9 +958,8 @@ Fresh context means:
 
 Agent execution must behave like stateless function calls over artifacts.
 
-=====================================================================
-23. RALPH LOOP DEFINITION
-=====================================================================
+## 23. RALPH LOOP DEFINITION
+
 
 Ralph Loop is the bounded generate/validate/repair loop used only during code execution.
 
@@ -960,9 +982,8 @@ Ralph Loop must not be used during:
 - ticket creation
 - diagram generation
 
-=====================================================================
-24. CRITIC DEFINITION
-=====================================================================
+## 24. CRITIC DEFINITION
+
 
 Critic is a validation stage executed after an implementation attempt.
 
@@ -984,9 +1005,8 @@ For example, critic may be structured as:
 - DiffValidator
 - ReadinessValidator
 
-=====================================================================
-25. GATE MODEL
-=====================================================================
+## 25. GATE MODEL
+
 
 SpecForge must support explicit named gates.
 
@@ -1016,9 +1036,8 @@ CLI:
 - specforge approve <gate>
 - sf approve <gate>
 
-=====================================================================
-26. TDD EXECUTION
-=====================================================================
+## 26. TDD EXECUTION
+
 
 Task execution must follow strict TDD order:
 
@@ -1030,9 +1049,8 @@ Task execution must follow strict TDD order:
 
 Do not skip RED except by explicit override.
 
-=====================================================================
-27. CI POLICY
-=====================================================================
+## 27. CI POLICY
+
 
 CI must support, at minimum:
 - lint
@@ -1053,9 +1071,8 @@ Evaluation gates:
 - if enabled, source of truth must come from config/policy
 - if eval/plan.md exists and eval is enabled, regression blocks merge
 
-=====================================================================
-28. EXISTING REPOSITORY SUPPORT
-=====================================================================
+## 28. EXISTING REPOSITORY SUPPORT
+
 
 SpecForge must support existing repositories.
 
@@ -1068,9 +1085,8 @@ Required capabilities:
 
 This must work without scanning the entire repo into model context.
 
-=====================================================================
-29. MINIMAL DIFF POLICY
-=====================================================================
+## 29. MINIMAL DIFF POLICY
+
 
 Implementation must:
 - modify the smallest set of files possible
@@ -1078,9 +1094,8 @@ Implementation must:
 - avoid unnecessary renames/moves
 - respect repository style and conventions
 
-=====================================================================
-30. COMMIT MESSAGE STANDARD
-=====================================================================
+## 30. COMMIT MESSAGE STANDARD
+
 
 Use conventional commits.
 
@@ -1089,9 +1104,8 @@ Examples:
 - feat(cli): add context pack builder
 - test(dag): add scheduler coverage
 
-=====================================================================
-31. GOLDEN DEMO REPO REQUIREMENT
-=====================================================================
+## 31. GOLDEN DEMO REPO REQUIREMENT
+
 
 SpecForge v1 should ship with a tiny reference or demo project.
 
@@ -1110,9 +1124,8 @@ The demo should support:
 - sf explain
 - sf run-task
 
-=====================================================================
-32. CLI UX REQUIREMENTS
-=====================================================================
+## 32. CLI UX REQUIREMENTS
+
 
 SpecForge must expose both:
 
@@ -1141,9 +1154,8 @@ User-facing output must be:
 
 Avoid theatrical or overly anthropomorphic CLI behavior.
 
-=====================================================================
-33. DOCTOR COMMAND
-=====================================================================
+## 33. DOCTOR COMMAND
+
 
 Command:
 - specforge doctor
@@ -1165,9 +1177,8 @@ Outputs:
 - human-readable summary
 - machine-readable status if useful
 
-=====================================================================
-34. EXPLAIN COMMAND
-=====================================================================
+## 34. EXPLAIN COMMAND
+
 
 Command:
 - specforge explain
@@ -1193,9 +1204,8 @@ This command is a trust-building and transparency feature.
 Explain output must be derived from actual artifacts, config/policy, and scheduler state.
 It must not invent plan steps that are not represented in the current run state.
 
-=====================================================================
-35. DRY-RUN MODE
-=====================================================================
+## 35. DRY-RUN MODE
+
 
 SpecForge must support dry-run behavior.
 
@@ -1213,9 +1223,8 @@ Dry-run output should include:
 - PRs/issues that would be opened
 - which steps are blocked by gates
 
-=====================================================================
-36. INSPECT COMMAND
-=====================================================================
+## 36. INSPECT COMMAND
+
 
 Command:
 - specforge inspect
@@ -1245,9 +1254,8 @@ This command should feel highly useful immediately, even without adopting the en
 Inspect must be non-destructive by default.
 It may generate internal analysis artifacts, but it must not modify application source code, dependency manifests, CI configuration, or README unless explicitly instructed.
 
-=====================================================================
-37. V1 IMPLEMENTATION PHASES
-=====================================================================
+## 37. V1 IMPLEMENTATION PHASES
+
 
 Phase 1 — Core Contracts and Artifacts
 Implement:
@@ -1308,9 +1316,8 @@ Implement:
 - example project
 - contribution mode polish
 
-=====================================================================
-38. POST-V1 NEXT PHASES
-=====================================================================
+## 38. POST-V1 NEXT PHASES
+
 
 After v1 is working, implement optional items in this order:
 
@@ -1350,9 +1357,8 @@ Phase 12 — Domain Packs
 - ai-agents
 - ml-platform
 
-=====================================================================
-39. FUTURE COMMANDS / ROADMAP
-=====================================================================
+## 39. FUTURE COMMANDS / ROADMAP
+
 
 These commands do not need full v1 implementation, but the architecture should make them easy to add.
 
@@ -1401,9 +1407,8 @@ These future commands should build on:
 - decomposeToWorkGraph
 - buildContextPack
 
-=====================================================================
-40. FUTURE IMPROVEMENTS / PLATFORM ROADMAP
-=====================================================================
+## 40. FUTURE IMPROVEMENTS / PLATFORM ROADMAP
+
 
 These are important future capabilities and should be architecturally supported now, but not fully implemented in v1.
 
@@ -1462,9 +1467,8 @@ Examples:
 - require stricter TDD or approvals for high-risk changes
 - suggest refactors or test hardening in hotspots
 
-=====================================================================
-41. CLI COMMANDS
-=====================================================================
+## 41. CLI COMMANDS
+
 
 Primary commands:
 - specforge init
@@ -1488,9 +1492,8 @@ Alias commands:
 - sf explain
 - sf inspect
 
-=====================================================================
-42. IMPLEMENTATION INSTRUCTIONS
-=====================================================================
+## 42. IMPLEMENTATION INSTRUCTIONS
+
 
 Build SpecForge according to this specification.
 
