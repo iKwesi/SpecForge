@@ -4,6 +4,9 @@ SpecForge is a specification-driven engineering orchestration CLI that converts 
 
 SpecForge treats software engineering like a deterministic build system: ideas become specs, specs become tasks, and tasks become tested, reviewable changes.
 
+| [Contributing](./CONTRIBUTING.md) | [License](./LICENSE) | [Development Tracker](https://github.com/iKwesi/SpecForge/issues/54) | [Project Board](https://github.com/users/iKwesi/projects/1) |
+| --- | --- | --- | --- |
+
 ## Status
 
 Early development. The repository is currently implementing Phase 1 foundations:
