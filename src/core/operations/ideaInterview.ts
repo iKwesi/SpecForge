@@ -7,7 +7,7 @@ import {
   createNextArtifactMetadata
 } from "../artifacts/versioning.js";
 import type { ProjectMode } from "../contracts/domain.js";
-import type { SkillContract } from "../contracts/skill.js";
+import type { OperationContract } from "../contracts/operation.js";
 
 export const IDEA_BUCKET_IDS = [
   "outcome",
@@ -160,11 +160,11 @@ const AMBIGUOUS_ANSWER_PATTERNS = [
 const DEFAULT_MAX_QUESTIONS_PER_ROUND = 10;
 const IDEA_BRIEF_FILENAME = "idea_brief.json";
 
-export const IDEA_INTERVIEW_SKILL_CONTRACT: SkillContract<
+export const IDEA_INTERVIEW_OPERATION_CONTRACT: OperationContract<
   IdeaInterviewInput,
   IdeaInterviewResult
 > = {
-  name: "skill.ideaInterview",
+  name: "operation.ideaInterview",
   version: "v1",
   purpose: "Clarify user intent into a structured idea brief artifact.",
   inputs_schema: {} as IdeaInterviewInput,
@@ -279,14 +279,14 @@ async function writeIdeaBriefArtifact(input: WriteIdeaBriefArtifactInput): Promi
   const metadata = existingArtifact
     ? createNextArtifactMetadata({
         previous: existingArtifact.metadata,
-        generator: "skill.ideaInterview",
+        generator: "operation.ideaInterview",
         sourceRefs: [],
         content: serializedContent,
         ...(input.created_timestamp ? { createdTimestamp: input.created_timestamp } : {})
       })
     : createInitialArtifactMetadata({
         artifactId: "idea_brief",
-        generator: "skill.ideaInterview",
+        generator: "operation.ideaInterview",
         sourceRefs: [],
         content: serializedContent,
         ...(input.created_timestamp ? { createdTimestamp: input.created_timestamp } : {})

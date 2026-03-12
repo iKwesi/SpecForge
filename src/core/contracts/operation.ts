@@ -1,4 +1,4 @@
-export interface SkillContract<TInputs, TOutputs> {
+export interface OperationContract<TInputs, TOutputs> {
   name: string;
   version: string;
   purpose: string;

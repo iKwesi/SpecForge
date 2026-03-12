@@ -15,6 +15,23 @@ Early development. The repository is currently implementing Phase 1 foundations:
 - policy/config model
 - test and build scaffold
 
+## Internal Operations vs External Skills
+
+SpecForge separates deterministic orchestration logic from reusable capability plugins:
+
+- Internal operations:
+  - deterministic workflow units in the core engine
+  - responsible for artifact generation, validation, planning, decomposition, scheduling, and execution control
+  - implemented under `src/core/operations`
+
+- External skills:
+  - reusable domain-specific capability plugins (built-in, verified provider, or user-installed)
+  - discovered and managed through a Skill Registry / provider layer
+  - selected by policy based on task type, trust, and compatibility
+
+SpecForge orchestrates workflow and safety; skills provide domain expertise.
+It is a structured engineering orchestration layer, not a monolithic domain-expert agent.
+
 ## Tech Stack
 
 - TypeScript

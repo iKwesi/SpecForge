@@ -13,7 +13,7 @@ describe("artifact versioning invariants", () => {
     const content = JSON.stringify({ data: "v1" });
     const created = createInitialArtifactMetadata({
       artifactId: "spec.index",
-      generator: "skill.generateSpecPack",
+      generator: "operation.generateSpecPack",
       sourceRefs: [],
       content
     });
@@ -24,7 +24,7 @@ describe("artifact versioning invariants", () => {
     expect(created.created_timestamp).toMatch(
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
     );
-    expect(created.generator).toBe("skill.generateSpecPack");
+    expect(created.generator).toBe("operation.generateSpecPack");
     expect(created.source_refs).toEqual([]);
     expect(created.checksum).toHaveLength(64);
   });
@@ -32,14 +32,14 @@ describe("artifact versioning invariants", () => {
   it("increments versions and records parent version for derived artifacts", () => {
     const v1 = createInitialArtifactMetadata({
       artifactId: "prd.main",
-      generator: "skill.generatePRD",
+      generator: "operation.generatePRD",
       sourceRefs: [],
       content: "first"
     });
 
     const v2 = createNextArtifactMetadata({
       previous: v1,
-      generator: "skill.generatePRD",
+      generator: "operation.generatePRD",
       sourceRefs: [{ artifact_id: "idea_brief", artifact_version: "v1" }],
       content: "second"
     });

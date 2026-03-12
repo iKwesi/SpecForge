@@ -4,11 +4,11 @@ import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
 
-import type { IdeaBriefArtifact } from "../../src/core/skills/ideaInterview.js";
+import type { IdeaBriefArtifact } from "../../src/core/operations/ideaInterview.js";
 import {
   GeneratePrdError,
   runGeneratePrd
-} from "../../src/core/skills/generatePRD.js";
+} from "../../src/core/operations/generatePRD.js";
 import { PRD_REQUIRED_SECTIONS } from "../../src/core/spec/contracts.js";
 
 function buildIdeaBrief(overrides?: Partial<IdeaBriefArtifact>): IdeaBriefArtifact {
@@ -33,7 +33,7 @@ function buildIdeaBrief(overrides?: Partial<IdeaBriefArtifact>): IdeaBriefArtifa
       artifact_id: "idea_brief",
       artifact_version: "v1",
       created_timestamp: "2026-03-08T00:00:00.000Z",
-      generator: "skill.ideaInterview",
+      generator: "operation.ideaInterview",
       source_refs: [],
       checksum: "0".repeat(64)
     },

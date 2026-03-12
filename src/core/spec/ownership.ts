@@ -9,25 +9,25 @@ export type ArtifactKind = (typeof ARTIFACT_KINDS)[number];
 
 export interface ArtifactOwnershipContract {
   artifact_kind: ArtifactKind;
-  owner_skill: string;
+  owner_operation: string;
 }
 
 export const ARTIFACT_OWNERSHIP_REGISTRY: Record<ArtifactKind, ArtifactOwnershipContract> = {
   idea_brief: {
     artifact_kind: "idea_brief",
-    owner_skill: "skill.ideaInterview"
+    owner_operation: "operation.ideaInterview"
   },
   prd: {
     artifact_kind: "prd",
-    owner_skill: "skill.generatePRD"
+    owner_operation: "operation.generatePRD"
   },
   spec: {
     artifact_kind: "spec",
-    owner_skill: "skill.generateSpecPack"
+    owner_operation: "operation.generateSpecPack"
   },
   validation_report: {
     artifact_kind: "validation_report",
-    owner_skill: "skill.validateSpecPack"
+    owner_operation: "operation.validateSpecPack"
   }
 };
 
@@ -54,4 +54,3 @@ export function inferArtifactKindFromId(artifactId: string): ArtifactKind | unde
 export function isOwnedArtifactKind(kind: string): kind is ArtifactKind {
   return ARTIFACT_KINDS.includes(kind as ArtifactKind);
 }
-

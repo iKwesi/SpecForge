@@ -68,3 +68,16 @@ Each PR should include:
 2. Call out assumptions and tradeoffs early.
 3. Keep discussion technical, respectful, and evidence-based.
 4. Prefer explicit decisions over implied intent.
+
+## 10. Terminology Conventions
+Use these terms consistently in code and docs:
+
+- operation:
+  - an internal deterministic workflow component in SpecForge core
+  - examples: `operation.ideaInterview`, `operation.generatePRD`, `operation.generateSpecPack`
+
+- skill:
+  - an external reusable capability plugin sourced from built-ins, verified providers, or user-installed packages
+  - skills are orchestrated through the Skill Registry layer
+
+Do not label internal runtime operations as skills.
