@@ -2,6 +2,7 @@ export const ARTIFACT_KINDS = [
   "idea_brief",
   "prd",
   "spec",
+  "repo_profile",
   "validation_report"
 ] as const;
 
@@ -25,6 +26,10 @@ export const ARTIFACT_OWNERSHIP_REGISTRY: Record<ArtifactKind, ArtifactOwnership
     artifact_kind: "spec",
     owner_operation: "operation.generateSpecPack"
   },
+  repo_profile: {
+    artifact_kind: "repo_profile",
+    owner_operation: "operation.profileRepository"
+  },
   validation_report: {
     artifact_kind: "validation_report",
     owner_operation: "operation.validateSpecPack"
@@ -42,6 +47,10 @@ export function inferArtifactKindFromId(artifactId: string): ArtifactKind | unde
 
   if (artifactId.startsWith("spec.")) {
     return "spec";
+  }
+
+  if (artifactId === "repo_profile") {
+    return "repo_profile";
   }
 
   if (artifactId.startsWith("validation_report.")) {
