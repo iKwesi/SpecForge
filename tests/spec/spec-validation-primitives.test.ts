@@ -20,7 +20,7 @@ function makePrdArtifact(
     kind: "prd",
     metadata: createInitialArtifactMetadata({
       artifactId: "prd.main",
-      generator: "skill.generatePRD",
+      generator: "operation.generatePRD",
       sourceRefs: [{ artifact_id: "idea_brief", artifact_version: "v1" }],
       content: JSON.stringify(sections)
     }),
@@ -36,7 +36,7 @@ function makeSpecArtifact(
     kind: "spec",
     metadata: createInitialArtifactMetadata({
       artifactId: "spec.main",
-      generator: "skill.generateSpecPack",
+      generator: "operation.generateSpecPack",
       sourceRefs: [{ artifact_id: "prd.main", artifact_version: "v1" }],
       content: JSON.stringify(sections)
     }),
@@ -105,7 +105,7 @@ describe("reference and version validation", () => {
   });
 
   it("uses ownership registry and returns invalid_reference for unknown artifact kinds", () => {
-    expect(ARTIFACT_OWNERSHIP_REGISTRY.prd.owner_skill).toBe("skill.generatePRD");
+    expect(ARTIFACT_OWNERSHIP_REGISTRY.prd.owner_operation).toBe("operation.generatePRD");
 
     const issues = validateArtifactReferences({
       artifactId: "spec.main",
@@ -121,4 +121,3 @@ describe("reference and version validation", () => {
     ]);
   });
 });
-

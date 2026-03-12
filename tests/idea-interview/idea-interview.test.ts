@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   IDEA_BUCKET_DEFINITIONS,
   runIdeaInterview
-} from "../../src/core/skills/ideaInterview.js";
+} from "../../src/core/operations/ideaInterview.js";
 
 function buildCompleteAnswers(): Record<string, string> {
   const answers: Record<string, string> = {};
@@ -119,7 +119,7 @@ describe("idea_brief artifact publishing", () => {
     expect(first.artifact?.metadata.artifact_id).toBe("idea_brief");
     expect(first.artifact?.metadata.artifact_version).toBe("v1");
     expect(first.artifact?.metadata.parent_version).toBeUndefined();
-    expect(first.artifact?.metadata.generator).toBe("skill.ideaInterview");
+    expect(first.artifact?.metadata.generator).toBe("operation.ideaInterview");
     expect(first.artifact?.metadata.created_timestamp).toBe("2026-03-08T12:00:00.000Z");
     expect(first.artifact?.metadata.checksum).toHaveLength(64);
 

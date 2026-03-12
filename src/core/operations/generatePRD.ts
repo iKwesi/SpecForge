@@ -7,7 +7,7 @@ import {
   createNextArtifactMetadata
 } from "../artifacts/versioning.js";
 import type { ProjectMode } from "../contracts/domain.js";
-import type { SkillContract } from "../contracts/skill.js";
+import type { OperationContract } from "../contracts/operation.js";
 import type { PrdSectionId, ValidationIssue } from "../spec/contracts.js";
 import { PRD_REQUIRED_SECTIONS } from "../spec/contracts.js";
 import { validateRequiredSections } from "../spec/validation.js";
@@ -72,8 +72,8 @@ export interface GeneratePrdResult {
   validation_issues: ValidationIssue[];
 }
 
-export const GENERATE_PRD_SKILL_CONTRACT: SkillContract<GeneratePrdInput, GeneratePrdResult> = {
-  name: "skill.generatePRD",
+export const GENERATE_PRD_OPERATION_CONTRACT: OperationContract<GeneratePrdInput, GeneratePrdResult> = {
+  name: "operation.generatePRD",
   version: "v1",
   purpose: "Generate PRD artifacts from an approved or accepted idea brief.",
   inputs_schema: {} as GeneratePrdInput,
@@ -266,7 +266,7 @@ function createPrdMetadata(input: CreatePrdMetadataInput): ArtifactMetadata {
   if (!input.previous_version) {
     return createInitialArtifactMetadata({
       artifactId: input.artifact_id,
-      generator: "skill.generatePRD",
+      generator: "operation.generatePRD",
       sourceRefs: input.source_refs,
       content: input.content,
       ...(input.created_timestamp ? { createdTimestamp: input.created_timestamp } : {})
@@ -278,11 +278,11 @@ function createPrdMetadata(input: CreatePrdMetadataInput): ArtifactMetadata {
       artifact_id: input.artifact_id,
       artifact_version: input.previous_version,
       created_timestamp: "1970-01-01T00:00:00.000Z",
-      generator: "skill.generatePRD",
+      generator: "operation.generatePRD",
       source_refs: input.source_refs,
       checksum: "0".repeat(64)
     },
-    generator: "skill.generatePRD",
+    generator: "operation.generatePRD",
     sourceRefs: input.source_refs,
     content: input.content,
     ...(input.created_timestamp ? { createdTimestamp: input.created_timestamp } : {})
