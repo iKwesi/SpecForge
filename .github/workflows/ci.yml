@@ -103,6 +103,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -119,13 +121,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate coverage data
+        run: pnpm test:coverage
+
+      - name: Run changed-lines coverage check
+        run: pnpm ci:coverage
+
       - name: Run CI policy check
         run: pnpm ci:policy
 
-      - name: Upload CI policy report
+      - name: Upload CI reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: ci-policy-report
-          path: .specforge/ci/policy-report.txt
+          name: ci-reports
+          path: |
+            .specforge/ci/policy-report.txt
+            .specforge/ci/changed-lines-coverage-report.txt
           if-no-files-found: error
