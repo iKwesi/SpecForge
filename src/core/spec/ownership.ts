@@ -3,6 +3,7 @@ export const ARTIFACT_KINDS = [
   "prd",
   "spec",
   "architecture_summary",
+  "delta_spec",
   "proposal_summary",
   "proposal_draft",
   "context_pack",
@@ -33,6 +34,10 @@ export const ARTIFACT_OWNERSHIP_REGISTRY: Record<ArtifactKind, ArtifactOwnership
   architecture_summary: {
     artifact_kind: "architecture_summary",
     owner_operation: "operation.mapArchitectureFromRepo"
+  },
+  delta_spec: {
+    artifact_kind: "delta_spec",
+    owner_operation: "operation.generateDeltaSpec"
   },
   proposal_summary: {
     artifact_kind: "proposal_summary",
@@ -71,6 +76,10 @@ export function inferArtifactKindFromId(artifactId: string): ArtifactKind | unde
 
   if (artifactId === "architecture_summary") {
     return "architecture_summary";
+  }
+
+  if (artifactId === "delta_spec") {
+    return "delta_spec";
   }
 
   if (artifactId === "proposal_summary.md") {
