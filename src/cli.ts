@@ -70,7 +70,7 @@ Examples:
   $ specforge doctor
     Validate local tooling, repository readiness, and contribution prerequisites.
 
-  $ specforge inspect --repository-root . --artifact-dir .specforge
+  $ specforge inspect --repository-root . --artifact-dir .
     Scan an existing repository and emit bounded architecture artifacts for planning.
 
   $ specforge explain --artifact-file .specforge/task-results/TASK-1.json
@@ -178,14 +178,17 @@ The command reads artifact inputs and optional policy/schedule context, then pri
     .command("inspect")
     .description("Profile a repository and map bounded architecture outputs without touching application code. Produces a repository profile artifact and an architecture summary artifact in a .specforge subdirectory. Example: specforge inspect --repository-root . --artifact-dir .")
     .option("--repository-root <path>", "Repository root to inspect (defaults to the current working directory)")
-    .option("--artifact-dir <path>", "Directory where generated .specforge artifacts should be written")
+    .option(
+      "--artifact-dir <path>",
+      "Parent/output directory under which the .specforge artifact directory will be created"
+    )
     .option("--deep", "Increase the bounded scan budget for deeper repository inspection")
     .addHelpText(
       "after",
       `
 Examples:
   $ specforge inspect
-  $ specforge inspect --repository-root ../my-repo --artifact-dir ../my-repo/.specforge --deep
+  $ specforge inspect --repository-root ../my-repo --artifact-dir ../my-repo --deep
 
 What it produces:
   - a repository profile artifact
