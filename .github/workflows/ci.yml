@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -21,18 +24,19 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: pnpm
+
+      - name: Enable Corepack and pnpm
+        # setup-node's pnpm cache hook expects pnpm to already exist on PATH.
+        # We bootstrap pnpm explicitly first to keep the workflow deterministic.
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.31.0 --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -46,18 +50,19 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: pnpm
+
+      - name: Enable Corepack and pnpm
+        # setup-node's pnpm cache hook expects pnpm to already exist on PATH.
+        # We bootstrap pnpm explicitly first to keep the workflow deterministic.
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.31.0 --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -71,18 +76,19 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: pnpm
+
+      - name: Enable Corepack and pnpm
+        # setup-node's pnpm cache hook expects pnpm to already exist on PATH.
+        # We bootstrap pnpm explicitly first to keep the workflow deterministic.
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.31.0 --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -96,18 +102,19 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
+        uses: actions/checkout@v6
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: 22
-          cache: pnpm
+
+      - name: Enable Corepack and pnpm
+        # setup-node's pnpm cache hook expects pnpm to already exist on PATH.
+        # We bootstrap pnpm explicitly first to keep the workflow deterministic.
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.31.0 --activate
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -117,7 +124,7 @@ jobs:
 
       - name: Upload CI policy report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ci-policy-report
           path: .specforge/ci/policy-report.txt

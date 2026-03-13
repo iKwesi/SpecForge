@@ -4,6 +4,7 @@
   "private": true,
   "description": "Specification-driven engineering orchestration CLI",
   "type": "module",
+  "packageManager": "pnpm@10.31.0",
   "bin": {
     "specforge": "dist/cli.js",
     "sf": "dist/cli.js"
