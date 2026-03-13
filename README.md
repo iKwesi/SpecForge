@@ -1,5 +1,7 @@
 # SpecForge
 
+[![CI](https://github.com/iKwesi/SpecForge/actions/workflows/ci.yml/badge.svg)](https://github.com/iKwesi/SpecForge/actions/workflows/ci.yml)
+
 SpecForge is a specification-driven engineering orchestration CLI that converts ideas and repository changes into disciplined, artifact-driven development workflows.
 
 SpecForge treats software engineering like a deterministic build system: ideas become specs, specs become tasks, and tasks become tested, reviewable changes.
