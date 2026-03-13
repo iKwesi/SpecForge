@@ -5,6 +5,7 @@ export const ARTIFACT_KINDS = [
   "architecture_summary",
   "delta_spec",
   "task_execution_result",
+  "critic_result",
   "proposal_summary",
   "proposal_draft",
   "context_pack",
@@ -43,6 +44,10 @@ export const ARTIFACT_OWNERSHIP_REGISTRY: Record<ArtifactKind, ArtifactOwnership
   task_execution_result: {
     artifact_kind: "task_execution_result",
     owner_operation: "operation.devTDDTask"
+  },
+  critic_result: {
+    artifact_kind: "critic_result",
+    owner_operation: "operation.criticRalphLoop"
   },
   proposal_summary: {
     artifact_kind: "proposal_summary",
@@ -89,6 +94,10 @@ export function inferArtifactKindFromId(artifactId: string): ArtifactKind | unde
 
   if (artifactId.startsWith("task_execution_result.")) {
     return "task_execution_result";
+  }
+
+  if (artifactId.startsWith("critic_result.")) {
+    return "critic_result";
   }
 
   if (artifactId === "proposal_summary.md") {
