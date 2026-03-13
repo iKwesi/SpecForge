@@ -13,6 +13,12 @@ import {
   type ExplainResult,
   type RunExplainInput
 } from "./core/diagnostics/explain.js";
+import {
+  formatInspectReport,
+  runInspect,
+  type InspectResult,
+  type RunInspectInput
+} from "./core/diagnostics/inspect.js";
 
 interface CliWriter {
   write(chunk: string): boolean | void;
@@ -25,6 +31,8 @@ export interface CliDependencies {
   doctor_input?: RunDoctorInput;
   explain_runner?: (input: RunExplainInput) => Promise<ExplainResult>;
   explain_input?: Partial<RunExplainInput>;
+  inspect_runner?: (input?: RunInspectInput) => Promise<InspectResult>;
+  inspect_input?: Partial<RunInspectInput>;
 }
 
 class CliExitSignal extends Error {
@@ -44,6 +52,8 @@ export function createProgram(dependencies: CliDependencies = {}): Command {
   const doctorInput = dependencies.doctor_input;
   const explainRunner = dependencies.explain_runner ?? runExplain;
   const explainInput = dependencies.explain_input;
+  const inspectRunner = dependencies.inspect_runner ?? runInspect;
+  const inspectInput = dependencies.inspect_input;
   const program = new Command();
 
   program.exitOverride();
@@ -102,6 +112,30 @@ export function createProgram(dependencies: CliDependencies = {}): Command {
         throw new CliExitSignal(1);
       }
     });
+
+  program
+    .command("inspect")
+    .description("Profile the repository and map bounded architecture outputs without touching application code")
+    .option("--repository-root <path>", "Repository root to inspect")
+    .option("--artifact-dir <path>", "Directory where .specforge artifacts should be written")
+    .option("--deep", "Increase the bounded scan budget for deeper repository inspection")
+    .action(
+      async (options: { repositoryRoot?: string; artifactDir?: string; deep?: boolean }) => {
+        try {
+          const result = await inspectRunner({
+            repository_root: options.repositoryRoot ?? process.cwd(),
+            ...(options.artifactDir ? { artifact_dir: options.artifactDir } : {}),
+            ...(options.deep ? { deep: true } : {}),
+            ...(inspectInput ?? {})
+          });
+
+          stdout.write(formatInspectReport(result));
+        } catch (error) {
+          stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+          throw new CliExitSignal(1);
+        }
+      }
+    );
 
   return program;
 }
