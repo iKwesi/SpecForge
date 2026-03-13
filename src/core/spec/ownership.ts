@@ -2,6 +2,7 @@ export const ARTIFACT_KINDS = [
   "idea_brief",
   "prd",
   "spec",
+  "replan_subgraph",
   "architecture_summary",
   "delta_spec",
   "task_execution_result",
@@ -32,6 +33,10 @@ export const ARTIFACT_OWNERSHIP_REGISTRY: Record<ArtifactKind, ArtifactOwnership
   spec: {
     artifact_kind: "spec",
     owner_operation: "operation.generateSpecPack"
+  },
+  replan_subgraph: {
+    artifact_kind: "replan_subgraph",
+    owner_operation: "operation.replanAffectedSubgraph"
   },
   architecture_summary: {
     artifact_kind: "architecture_summary",
@@ -82,6 +87,10 @@ export function inferArtifactKindFromId(artifactId: string): ArtifactKind | unde
 
   if (artifactId.startsWith("spec.")) {
     return "spec";
+  }
+
+  if (artifactId === "replan_subgraph") {
+    return "replan_subgraph";
   }
 
   if (artifactId === "architecture_summary") {
