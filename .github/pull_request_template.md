@@ -17,7 +17,7 @@ List docs updated, or explain why no docs changes were needed.
 Describe potential risks, migration impact, or rollback considerations.
 
 ## Checklist
-- [ ] Tests pass locally
-- [ ] Lint/typecheck run if applicable
+- [ ] Local checks run as applicable (`pnpm test`, `pnpm typecheck`, `pnpm build`, `pnpm ci:policy`)
 - [ ] Docs updated if required
 - [ ] Change is minimal and scoped
+- [ ] PR targets `main` and links the issue it addresses
