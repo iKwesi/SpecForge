@@ -60,19 +60,69 @@ export function createProgram(dependencies: CliDependencies = {}): Command {
 
   program
     .name("specforge")
-    .description("Specification-driven engineering orchestration CLI")
-    .version("0.1.0");
+    .description("Specification-driven engineering orchestration CLI for turning ideas and repositories into disciplined, artifact-driven workflows. Workflow guide: run 'specforge doctor' to validate readiness, 'specforge inspect' to generate repository profile and architecture summary artifacts, and 'specforge explain' to trace artifact lineage with deterministic evidence.")
+    .usage("<command> [options]")
+    .version("0.1.0")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ specforge doctor
+    Validate local tooling, repository readiness, and contribution prerequisites.
+
+  $ specforge inspect --repository-root . --artifact-dir .
+    Scan an existing repository and emit bounded architecture artifacts for planning.
+
+  $ specforge explain --artifact-file .specforge/task-results/TASK-1.json
+    Explain an artifact using deterministic evidence from related inputs.
+
+Workflow guide:
+  1. Run 'specforge doctor' before making changes to confirm your environment is ready.
+  2. Run 'specforge inspect' to profile a repository and generate architecture artifacts.
+  3. Run 'specforge explain' when you need traceable reasoning for generated artifacts.
+
+Artifacts:
+  - 'inspect' writes repository profile and architecture summary artifacts.
+  - 'explain' reads one or more artifact files plus optional policy/schedule evidence.
+  - 'doctor' reports readiness and exits non-zero when blocking issues are found.
+`
+    );
 
   program
     .command("start")
     .description("Start a SpecForge run (scaffold placeholder)")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ specforge start
+
+Use this placeholder command when wiring future workflow entrypoints.
+`
+    )
     .action(() => {
       stdout.write("SpecForge CLI scaffold ready.\n");
     });
 
   program
     .command("doctor")
-    .description("Check environment, tooling, repository, and policy readiness")
+    .description("Check environment, tooling, repository, and policy readiness before starting work. Example: specforge doctor")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ specforge doctor
+
+What it checks:
+  - runtime/tooling availability
+  - repository and policy readiness
+  - blocking issues that should be fixed before a run or PR
+
+Exit behavior:
+  - exits 0 when the environment is ready
+  - exits 1 when blocking failures are detected
+`
+    )
     .action(async () => {
       const result = await doctorRunner({
         cwd: process.cwd(),
@@ -88,15 +138,26 @@ export function createProgram(dependencies: CliDependencies = {}): Command {
 
   program
     .command("explain")
-    .description("Render deterministic explanations grounded in artifact, policy, and scheduler evidence")
+    .description("Render deterministic explanations grounded in artifact, policy, and scheduler evidence. Use this when you need traceable reasoning tied to artifact lineage. Example: specforge explain --artifact-file .specforge/task-results/TASK-1.json")
     .option(
       "--artifact-file <path>",
-      "Path to an artifact JSON file to explain",
+      "Path to an artifact JSON file to explain (repeat to include multiple artifacts)",
       collectOptionValues,
       []
     )
-    .option("--policy-file <path>", "Path to a policy JSON file")
-    .option("--schedule-file <path>", "Path to a scheduler JSON file")
+    .option("--policy-file <path>", "Path to a policy JSON file used as supporting evidence")
+    .option("--schedule-file <path>", "Path to a scheduler JSON file used as supporting evidence")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ specforge explain --artifact-file .specforge/task-results/TASK-1.json
+  $ specforge explain --artifact-file a.json --artifact-file b.json --policy-file policy.json
+
+Use this command when you need a human-readable explanation tied to artifact lineage.
+The command reads artifact inputs and optional policy/schedule context, then prints an evidence-based report.
+`
+    )
     .action(async (options: { artifactFile: string[]; policyFile?: string; scheduleFile?: string }) => {
       try {
         const result = await explainRunner({
@@ -115,10 +176,27 @@ export function createProgram(dependencies: CliDependencies = {}): Command {
 
   program
     .command("inspect")
-    .description("Profile the repository and map bounded architecture outputs without touching application code")
-    .option("--repository-root <path>", "Repository root to inspect")
-    .option("--artifact-dir <path>", "Directory where .specforge artifacts should be written")
+    .description("Profile a repository and map bounded architecture outputs without touching application code. Produces a repository profile artifact and an architecture summary artifact in a .specforge subdirectory. Example: specforge inspect --repository-root . --artifact-dir .")
+    .option("--repository-root <path>", "Repository root to inspect (defaults to the current working directory)")
+    .option(
+      "--artifact-dir <path>",
+      "Parent/output directory under which the .specforge artifact directory will be created"
+    )
     .option("--deep", "Increase the bounded scan budget for deeper repository inspection")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ specforge inspect
+  $ specforge inspect --repository-root ../my-repo --artifact-dir ../my-repo --deep
+
+What it produces:
+  - a repository profile artifact
+  - an architecture summary artifact
+
+Use this before planning or task decomposition when you need a bounded view of an existing codebase.
+`
+    )
     .action(
       async (options: { repositoryRoot?: string; artifactDir?: string; deep?: boolean }) => {
         try {
