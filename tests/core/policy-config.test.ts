@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { PROJECT_MODES } from "../../src/core/contracts/domain.js";
 import {
   createDefaultPolicyConfig,
   isKnownGate,
@@ -90,6 +91,10 @@ describe("policy config defaults", () => {
         })
       ])
     );
+    expect(
+      result.issues.find((issue) => issue.path === "gates.applicable_project_modes.spec_approval[1]")
+        ?.message
+    ).toBe(`must be one of ${PROJECT_MODES.join(", ")}.`);
   });
 
   it("rejects missing gates.applicable_project_modes because the contract requires it", () => {

@@ -92,12 +92,12 @@ describe("runExplain failure paths", () => {
     const artifactFile = await writeJsonFile(tempDir, "task_execution_result.json", buildArtifact());
     const policyFile = await writeJsonFile(tempDir, "policy.json", {
       coverage: {
-        scope: "changed-lines",
+        scope: "full-repo",
         enforcement: "warn-only"
       },
       parallelism: {
         max_concurrent_tasks: 0,
-        serialize_on_uncertainty: true
+        serialize_on_uncertainty: "yes"
       },
       gates: createDefaultPolicyConfig().gates
     });
@@ -107,7 +107,7 @@ describe("runExplain failure paths", () => {
         artifact_files: [artifactFile],
         policy_file: policyFile
       })
-    ).rejects.toThrow(/coverage\.enforcement/);
+    ).rejects.toThrow(/coverage\.scope .*; .*coverage\.enforcement .*; .*parallelism\.max_concurrent_tasks .*; \.\.\.and 1 more/);
 
     await expect(
       runExplain({

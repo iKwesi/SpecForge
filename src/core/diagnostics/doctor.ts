@@ -212,13 +212,13 @@ async function checkRepositoryRoot(input: {
 function checkPolicyConfig(policy: SpecForgePolicyConfig): DoctorCheck {
   const validation = validatePolicyConfig(policy);
   if (!validation.valid) {
-    const firstIssue = validation.issues[0];
+    const issueSummary = formatPolicyValidationIssues(validation.issues);
 
     return {
       id: "policy_config",
       label: "Policy config",
       status: "fail",
-      message: `Policy configuration is invalid: ${firstIssue?.path ?? "$"} ${firstIssue?.message ?? "invalid policy shape."}`,
+      message: `Policy configuration is invalid: ${issueSummary}`,
       remediation:
         "Update the policy config to match docs/POLICY_CONFIG.md or docs/examples/specforge.policy.example.json."
     };
@@ -230,6 +230,23 @@ function checkPolicyConfig(policy: SpecForgePolicyConfig): DoctorCheck {
     status: "pass",
     message: "Policy configuration is valid for the current v1 contract."
   };
+}
+
+function formatPolicyValidationIssues(
+  issues: Array<{ path: string; message: string }>
+): string {
+  const maxIssuesToShow = 3;
+  const displayedIssues = issues
+    .slice(0, maxIssuesToShow)
+    .map((issue) => `${issue.path} ${issue.message}`);
+  const remainingCount = issues.length - displayedIssues.length;
+  const baseMessage = displayedIssues.join("; ");
+
+  if (remainingCount > 0) {
+    return `${baseMessage}; ${remainingCount} additional issue${remainingCount === 1 ? "" : "s"} not shown.`;
+  }
+
+  return baseMessage;
 }
 
 async function defaultCommandRunner(

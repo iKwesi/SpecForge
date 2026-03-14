@@ -213,6 +213,7 @@ function validateApplicableProjectModes(
     return;
   }
 
+  const allowedModesDescription = PROJECT_MODES.join(", ");
   const applicableProjectModes = candidate as Record<string, unknown>;
   for (const [gate, modes] of Object.entries(applicableProjectModes)) {
     if (!isKnownGate(gate)) {
@@ -235,7 +236,7 @@ function validateApplicableProjectModes(
       if (!PROJECT_MODES.includes(mode as ProjectMode)) {
         issues.push({
           path: `gates.applicable_project_modes.${gate}[${index}]`,
-          message: "must be one of greenfield, existing-repo, contribution, or feature-proposal."
+          message: `must be one of ${allowedModesDescription}.`
         });
       }
     }

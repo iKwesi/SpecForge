@@ -79,11 +79,15 @@ describe("runDoctor failure paths", () => {
       }),
       policy: {
         ...createDefaultPolicyConfig(),
+        coverage: {
+          scope: "full-repo",
+          enforcement: "warn-only"
+        },
         parallelism: {
           max_concurrent_tasks: 0,
-          serialize_on_uncertainty: true
+          serialize_on_uncertainty: "yes"
         }
-      }
+      } as unknown as ReturnType<typeof createDefaultPolicyConfig>
     });
 
     expect(result.overall_status).toBe("fail");
@@ -92,11 +96,14 @@ describe("runDoctor failure paths", () => {
         expect.objectContaining({
           id: "policy_config",
           status: "fail",
-          message: expect.stringContaining("parallelism.max_concurrent_tasks"),
+          message: expect.stringContaining("coverage.scope"),
           remediation: expect.stringContaining("docs/POLICY_CONFIG.md")
         })
       ])
     );
+    expect(
+      result.checks.find((check) => check.id === "policy_config")?.message
+    ).toMatch(/coverage\.scope .*; .*coverage\.enforcement .*; .*parallelism\.max_concurrent_tasks .*additional issue not shown/);
   });
 });
 

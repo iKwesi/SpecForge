@@ -314,10 +314,18 @@ function asArtifactEvidenceInput(
 }
 
 function formatPolicyValidationIssues(issues: PolicyValidationIssue[]): string {
-  return issues
-    .slice(0, 3)
-    .map((issue) => `${issue.path} ${issue.message}`)
-    .join(" ");
+  const maxIssuesToShow = 3;
+  const displayedIssues = issues
+    .slice(0, maxIssuesToShow)
+    .map((issue) => `${issue.path} ${issue.message}`);
+  const remainingCount = issues.length - displayedIssues.length;
+  const baseMessage = displayedIssues.join("; ");
+
+  if (remainingCount > 0) {
+    return `${baseMessage}; ...and ${remainingCount} more`;
+  }
+
+  return baseMessage;
 }
 
 function isConservativeSchedule(value: unknown): value is ConservativeSchedule {
