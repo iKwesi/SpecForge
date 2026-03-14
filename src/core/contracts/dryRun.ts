@@ -2,6 +2,7 @@ export type DryRunChangeStatus = "planned" | "blocked";
 
 export type DryRunChangeKind =
   | "artifact_write"
+  | "file_write"
   | "task_execution"
   | "branch_create"
   | "workspace_prepare"
