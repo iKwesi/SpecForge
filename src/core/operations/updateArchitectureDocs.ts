@@ -63,7 +63,10 @@ export const UPDATE_ARCHITECTURE_DOCS_OPERATION_CONTRACT: OperationContract<
   purpose: "Generate maintained architecture documentation from inspect artifacts.",
   inputs_schema: {} as UpdateArchitectureDocsInput,
   outputs_schema: {} as UpdateArchitectureDocsResult,
-  side_effects: ["writes .specforge/architecture_summary.md", "writes docs/ARCHITECTURE.md"],
+  side_effects: [
+    "writes .specforge/architecture_summary.md",
+    "writes docs/ARCHITECTURE.md (or docs_path when provided)"
+  ],
   invariants: [
     "Generated architecture docs are derived only from repo_profile and architecture_summary inputs.",
     "Managed architecture doc sections preserve surrounding manual content.",
