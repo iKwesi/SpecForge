@@ -3,10 +3,12 @@ import { promisify } from "node:util";
 
 import {
   createDefaultPolicyConfig,
-  formatPolicyValidationIssues,
-  validatePolicyConfig,
   type SpecForgePolicyConfig
 } from "../contracts/policy.js";
+import {
+  evaluatePolicyConfigCheck,
+  type PolicyEnforcementReasonCode
+} from "../policy/enforcement.js";
 
 const execFileAsync = promisify(execFile);
 const MINIMUM_NODE_MAJOR = 22;
@@ -19,6 +21,7 @@ export interface DoctorCheck {
   status: DoctorStatus;
   message: string;
   remediation?: string;
+  reason_codes?: PolicyEnforcementReasonCode[];
 }
 
 export interface DoctorSummary {
@@ -211,25 +214,15 @@ async function checkRepositoryRoot(input: {
 }
 
 function checkPolicyConfig(policy: SpecForgePolicyConfig): DoctorCheck {
-  const validation = validatePolicyConfig(policy);
-  if (!validation.valid) {
-    const issueSummary = formatPolicyValidationIssues(validation.issues);
-
-    return {
-      id: "policy_config",
-      label: "Policy config",
-      status: "fail",
-      message: `Policy configuration is invalid: ${issueSummary}`,
-      remediation:
-        "Update the policy config to match docs/POLICY_CONFIG.md or docs/examples/specforge.policy.example.json."
-    };
-  }
+  const result = evaluatePolicyConfigCheck(policy);
 
   return {
-    id: "policy_config",
+    id: result.id,
     label: "Policy config",
-    status: "pass",
-    message: "Policy configuration is valid for the current v1 contract."
+    status: result.status,
+    message: result.message,
+    ...(result.remediation ? { remediation: result.remediation } : {}),
+    reason_codes: result.reason_codes
   };
 }
 

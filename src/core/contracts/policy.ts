@@ -24,9 +24,29 @@ export interface SpecForgePolicyConfig {
   gates: GatePolicy;
 }
 
+export type PolicyValidationReasonCode =
+  | "invalid_policy_object"
+  | "missing_coverage"
+  | "invalid_coverage_scope"
+  | "invalid_coverage_enforcement"
+  | "missing_parallelism"
+  | "invalid_parallelism_max_concurrent_tasks"
+  | "invalid_parallelism_serialize_on_uncertainty"
+  | "missing_gates"
+  | "missing_enabled_gates"
+  | "unknown_enabled_gate_key"
+  | "missing_enabled_gate_key"
+  | "invalid_enabled_gate_type"
+  | "missing_applicable_project_modes"
+  | "invalid_applicable_project_modes_shape"
+  | "unknown_applicable_project_modes_gate"
+  | "invalid_applicable_project_modes_type"
+  | "invalid_project_mode";
+
 export interface PolicyValidationIssue {
   path: string;
   message: string;
+  reason_code: PolicyValidationReasonCode;
 }
 
 export interface PolicyValidationResult {
@@ -92,7 +112,8 @@ export function validatePolicyConfig(candidate: unknown): PolicyValidationResult
       issues: [
         {
           path: "$",
-          message: "must be a JSON object."
+          message: "must be a JSON object.",
+          reason_code: "invalid_policy_object"
         }
       ]
     };
@@ -113,7 +134,8 @@ function validateCoveragePolicy(candidate: unknown, issues: PolicyValidationIssu
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
     issues.push({
       path: "coverage",
-      message: "must be an object with scope and enforcement."
+      message: "must be an object with scope and enforcement.",
+      reason_code: "missing_coverage"
     });
     return;
   }
@@ -122,14 +144,16 @@ function validateCoveragePolicy(candidate: unknown, issues: PolicyValidationIssu
   if (coverage.scope !== "changed-lines") {
     issues.push({
       path: "coverage.scope",
-      message: "must be \"changed-lines\"."
+      message: "must be \"changed-lines\".",
+      reason_code: "invalid_coverage_scope"
     });
   }
 
   if (coverage.enforcement !== "report-only" && coverage.enforcement !== "hard-block") {
     issues.push({
       path: "coverage.enforcement",
-      message: "must be \"report-only\" or \"hard-block\"."
+      message: "must be \"report-only\" or \"hard-block\".",
+      reason_code: "invalid_coverage_enforcement"
     });
   }
 }
@@ -138,7 +162,8 @@ function validateParallelismPolicy(candidate: unknown, issues: PolicyValidationI
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
     issues.push({
       path: "parallelism",
-      message: "must be an object with max_concurrent_tasks and serialize_on_uncertainty."
+      message: "must be an object with max_concurrent_tasks and serialize_on_uncertainty.",
+      reason_code: "missing_parallelism"
     });
     return;
   }
@@ -150,14 +175,16 @@ function validateParallelismPolicy(candidate: unknown, issues: PolicyValidationI
   ) {
     issues.push({
       path: "parallelism.max_concurrent_tasks",
-      message: "must be a positive integer."
+      message: "must be a positive integer.",
+      reason_code: "invalid_parallelism_max_concurrent_tasks"
     });
   }
 
   if (typeof parallelism.serialize_on_uncertainty !== "boolean") {
     issues.push({
       path: "parallelism.serialize_on_uncertainty",
-      message: "must be a boolean."
+      message: "must be a boolean.",
+      reason_code: "invalid_parallelism_serialize_on_uncertainty"
     });
   }
 }
@@ -166,7 +193,8 @@ function validateGatePolicy(candidate: unknown, issues: PolicyValidationIssue[])
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
     issues.push({
       path: "gates",
-      message: "must be an object with enabled_by_default and applicable_project_modes."
+      message: "must be an object with enabled_by_default and applicable_project_modes.",
+      reason_code: "missing_gates"
     });
     return;
   }
@@ -183,7 +211,8 @@ function validateEnabledGates(
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
     issues.push({
       path: "gates.enabled_by_default",
-      message: "must be an object keyed by known gate names."
+      message: "must be an object keyed by known gate names.",
+      reason_code: "missing_enabled_gates"
     });
     return;
   }
@@ -193,7 +222,8 @@ function validateEnabledGates(
     if (!isKnownGate(gate)) {
       issues.push({
         path: `gates.enabled_by_default.${gate}`,
-        message: "must use a known artifact gate key."
+        message: "must use a known artifact gate key.",
+        reason_code: "unknown_enabled_gate_key"
       });
     }
   }
@@ -203,7 +233,8 @@ function validateEnabledGates(
     if (value === undefined) {
       issues.push({
         path: `gates.enabled_by_default.${gate}`,
-        message: "is required and must be a boolean."
+        message: "is required and must be a boolean.",
+        reason_code: "missing_enabled_gate_key"
       });
       continue;
     }
@@ -211,7 +242,8 @@ function validateEnabledGates(
     if (typeof value !== "boolean") {
       issues.push({
         path: `gates.enabled_by_default.${gate}`,
-        message: "must be a boolean."
+        message: "must be a boolean.",
+        reason_code: "invalid_enabled_gate_type"
       });
     }
   }
@@ -224,7 +256,8 @@ function validateApplicableProjectModes(
   if (candidate === undefined) {
     issues.push({
       path: "gates.applicable_project_modes",
-      message: "must be an object keyed by gate name to arrays of supported project modes."
+      message: "must be an object keyed by gate name to arrays of supported project modes.",
+      reason_code: "missing_applicable_project_modes"
     });
     return;
   }
@@ -232,7 +265,8 @@ function validateApplicableProjectModes(
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
     issues.push({
       path: "gates.applicable_project_modes",
-      message: "must be an object keyed by gate name to arrays of supported project modes."
+      message: "must be an object keyed by gate name to arrays of supported project modes.",
+      reason_code: "invalid_applicable_project_modes_shape"
     });
     return;
   }
@@ -243,7 +277,8 @@ function validateApplicableProjectModes(
     if (!isKnownGate(gate)) {
       issues.push({
         path: `gates.applicable_project_modes.${gate}`,
-        message: "must use a known artifact gate key."
+        message: "must use a known artifact gate key.",
+        reason_code: "unknown_applicable_project_modes_gate"
       });
       continue;
     }
@@ -251,7 +286,8 @@ function validateApplicableProjectModes(
     if (!Array.isArray(modes)) {
       issues.push({
         path: `gates.applicable_project_modes.${gate}`,
-        message: "must be an array of supported project modes."
+        message: "must be an array of supported project modes.",
+        reason_code: "invalid_applicable_project_modes_type"
       });
       continue;
     }
@@ -260,7 +296,8 @@ function validateApplicableProjectModes(
       if (!PROJECT_MODES.includes(mode as ProjectMode)) {
         issues.push({
           path: `gates.applicable_project_modes.${gate}[${index}]`,
-          message: `must be one of ${allowedModesDescription}.`
+          message: `must be one of ${allowedModesDescription}.`,
+          reason_code: "invalid_project_mode"
         });
       }
     }
