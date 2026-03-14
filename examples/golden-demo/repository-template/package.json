@@ -2,8 +2,5 @@
   "name": "specforge-golden-demo-repository",
   "private": true,
   "type": "module",
-  "version": "0.0.0",
-  "scripts": {
-    "start": "node src/cli/main.ts"
-  }
+  "version": "0.0.0"
 }

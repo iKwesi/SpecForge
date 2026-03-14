@@ -14,4 +14,14 @@ describe("golden demo docs", () => {
     expect(docs).toContain("golden-demo-manifest.json");
     expect(readme).toContain("Golden Demo");
   });
+
+  it("keeps the fixture repository metadata free of unsupported direct TypeScript runtime scripts", async () => {
+    const fixturePackage = JSON.parse(
+      await readFile("examples/golden-demo/repository-template/package.json", "utf8")
+    ) as {
+      scripts?: Record<string, string>;
+    };
+
+    expect(fixturePackage.scripts?.start).toBeUndefined();
+  });
 });

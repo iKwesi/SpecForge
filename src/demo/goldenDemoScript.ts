@@ -18,14 +18,8 @@ export async function runGoldenDemoScript(
     stderr: process.stderr
   }
 ): Promise<number> {
-  const workspaceFlagIndex = args.indexOf("--workspace-root");
-  const explicitWorkspaceRoot =
-    workspaceFlagIndex >= 0 ? args[workspaceFlagIndex + 1] : undefined;
-  const workspaceRoot = explicitWorkspaceRoot && explicitWorkspaceRoot.length > 0
-    ? explicitWorkspaceRoot
-    : join(process.cwd(), ".tmp", "golden-demo");
-
   try {
+    const workspaceRoot = parseWorkspaceRootArgument(args);
     const result = await runGoldenDemo({
       workspace_root: workspaceRoot
     });
@@ -40,4 +34,18 @@ export async function runGoldenDemoScript(
     io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     return 1;
   }
+}
+
+function parseWorkspaceRootArgument(args: string[]): string {
+  const workspaceFlagIndex = args.indexOf("--workspace-root");
+  if (workspaceFlagIndex < 0) {
+    return join(process.cwd(), ".tmp", "golden-demo");
+  }
+
+  const explicitWorkspaceRoot = args[workspaceFlagIndex + 1];
+  if (!explicitWorkspaceRoot || explicitWorkspaceRoot.startsWith("-")) {
+    throw new Error("--workspace-root requires a directory path value.");
+  }
+
+  return explicitWorkspaceRoot;
 }
