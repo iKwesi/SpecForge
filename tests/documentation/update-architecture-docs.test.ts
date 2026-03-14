@@ -109,6 +109,40 @@ describe("updateArchitectureDocs failure paths", () => {
       })
     );
   });
+
+  it("rejects duplicate managed section markers instead of updating an ambiguous docs file", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "specforge-architecture-docs-"));
+    const docsDir = join(repoRoot, "docs");
+    await mkdir(docsDir, { recursive: true });
+    await writeFile(
+      join(docsDir, "ARCHITECTURE.md"),
+      [
+        "# SpecForge Architecture",
+        "",
+        "<!-- specforge:begin generated-architecture -->",
+        "old one",
+        "<!-- specforge:end generated-architecture -->",
+        "",
+        "<!-- specforge:begin generated-architecture -->",
+        "old two",
+        "<!-- specforge:end generated-architecture -->"
+      ].join("\n"),
+      "utf8"
+    );
+
+    await expect(
+      runUpdateArchitectureDocs({
+        project_mode: "existing-repo",
+        repository_root: repoRoot,
+        repo_profile: buildRepoProfile(repoRoot),
+        architecture_summary: buildArchitectureSummary(repoRoot)
+      })
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<UpdateArchitectureDocsError>>({
+        code: "invalid_docs_state"
+      })
+    );
+  });
 });
 
 describe("updateArchitectureDocs success paths", () => {
@@ -148,6 +182,46 @@ describe("updateArchitectureDocs success paths", () => {
 
     const summaryContent = await readFile(result.architecture_summary_markdown_path, "utf8");
     expect(summaryContent).toBe(`${result.architecture_summary_markdown}\n`);
+  });
+
+  it("replaces only the managed generated section and preserves surrounding manual bytes", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "specforge-architecture-docs-"));
+    const docsDir = join(repoRoot, "docs");
+    const docsPath = join(docsDir, "ARCHITECTURE.md");
+    await mkdir(docsDir, { recursive: true });
+    const before = [
+      "# SpecForge Architecture",
+      "",
+      "Manual intro.",
+      "",
+      "```ts",
+      "  preserve indentation exactly",
+      "```",
+      ""
+    ].join("\n");
+    const after = [
+      "",
+      "Manual appendix:",
+      "  keep this indentation too",
+      ""
+    ].join("\n");
+    await writeFile(
+      docsPath,
+      `${before}<!-- specforge:begin generated-architecture -->\nold generated section\n<!-- specforge:end generated-architecture -->${after}`,
+      "utf8"
+    );
+
+    const result = await runUpdateArchitectureDocs({
+      project_mode: "existing-repo",
+      repository_root: repoRoot,
+      repo_profile: buildRepoProfile(repoRoot),
+      architecture_summary: buildArchitectureSummary(repoRoot)
+    });
+
+    expect(result.architecture_docs_content.startsWith(before)).toBe(true);
+    expect(result.architecture_docs_content.endsWith(after)).toBe(true);
+    expect(result.architecture_docs_content).not.toContain("old generated section");
+    expect(result.architecture_docs_content).toContain("<!-- specforge:begin generated-architecture -->");
   });
 
   it("supports dry-run mode without mutating the repository", async () => {

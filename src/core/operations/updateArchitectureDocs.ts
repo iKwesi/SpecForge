@@ -258,7 +258,7 @@ function renderArchitectureDocsContent(
   const generatedSection = renderManagedGeneratedSection(repoProfile, architectureSummary);
   const existingDocs = currentDocsContent ?? "# Architecture\n";
 
-  return injectManagedSection(existingDocs, generatedSection).trimEnd();
+  return injectManagedSection(existingDocs, generatedSection);
 }
 
 function renderManagedGeneratedSection(
@@ -319,7 +319,22 @@ function renderEvidenceSection(
 
 function injectManagedSection(existingDocs: string, generatedSection: string): string {
   const startIndex = existingDocs.indexOf(GENERATED_SECTION_START);
+  const secondStartIndex =
+    startIndex >= 0
+      ? existingDocs.indexOf(GENERATED_SECTION_START, startIndex + GENERATED_SECTION_START.length)
+      : -1;
   const endIndex = existingDocs.indexOf(GENERATED_SECTION_END);
+  const secondEndIndex =
+    endIndex >= 0
+      ? existingDocs.indexOf(GENERATED_SECTION_END, endIndex + GENERATED_SECTION_END.length)
+      : -1;
+
+  if (secondStartIndex >= 0 || secondEndIndex >= 0) {
+    throw new UpdateArchitectureDocsError(
+      "invalid_docs_state",
+      `Architecture docs contain multiple managed section markers for ${GENERATED_SECTION_ID}.`
+    );
+  }
 
   if ((startIndex >= 0 && endIndex < 0) || (startIndex < 0 && endIndex >= 0) || endIndex < startIndex) {
     throw new UpdateArchitectureDocsError(
@@ -330,12 +345,41 @@ function injectManagedSection(existingDocs: string, generatedSection: string): s
 
   if (startIndex >= 0 && endIndex >= 0) {
     const sectionEnd = endIndex + GENERATED_SECTION_END.length;
-    return `${existingDocs.slice(0, startIndex).trimEnd()}\n\n${generatedSection}\n${existingDocs
-      .slice(sectionEnd)
-      .trimStart()}`;
+    const before = existingDocs.slice(0, startIndex);
+    const after = existingDocs.slice(sectionEnd);
+    let result = before;
+
+    // Preserve manual content byte-for-byte and only add separator newlines where
+    // the managed section would otherwise run into surrounding content.
+    if (result.length > 0 && !result.endsWith("\n")) {
+      result += "\n";
+    }
+
+    result += generatedSection;
+
+    if (after.length > 0 && !result.endsWith("\n") && !after.startsWith("\n")) {
+      result += "\n";
+    }
+
+    result += after;
+    return result;
   }
 
-  return `${existingDocs.trimEnd()}\n\n${generatedSection}\n`;
+  if (existingDocs.length === 0) {
+    return generatedSection;
+  }
+
+  let result = existingDocs;
+  if (!result.endsWith("\n")) {
+    result += "\n";
+  }
+
+  if (!result.endsWith("\n\n")) {
+    result += "\n";
+  }
+
+  result += generatedSection;
+  return result;
 }
 
 async function writeArchitectureSummaryMarkdown(path: string, markdown: string): Promise<void> {
