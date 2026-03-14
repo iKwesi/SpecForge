@@ -173,4 +173,43 @@ describe("generateSpecPack success paths", () => {
     expect(second.spec_index.metadata.artifact_version).toBe("v2");
     expect(second.spec_index.metadata.parent_version).toBe("v1");
   });
+
+  it("normalizes acceptance criteria before assigning canonical AC identifiers", async () => {
+    const artifactDir = await mkdtemp(join(tmpdir(), "specforge-spec-pack-"));
+    const prdJson = buildPrdJson({
+      sections: {
+        ...buildPrdJson().sections,
+        evaluation: [
+          "AC-7: keep downstream planning deterministic",
+          "with wrapped evidence lines",
+          "",
+          "- preserve provenance-aware excerpts",
+          "* avoid duplicated acceptance identifiers",
+          "2. keep bullets machine-addressable"
+        ].join("\n"),
+        quality_bar: "Quality Bar: every artifact handoff stays reviewable."
+      }
+    });
+
+    await runGenerateSpecPack({
+      project_mode: "greenfield",
+      idea_brief: buildIdeaBrief(),
+      prd_json: prdJson,
+      artifact_dir: artifactDir,
+      created_timestamp: new Date("2026-03-11T12:20:00.000Z")
+    });
+
+    const acceptanceMd = await readFile(join(artifactDir, "acceptance", "core.md"), "utf8");
+    expect(acceptanceMd).toContain(
+      "- AC-1: Evaluation: keep downstream planning deterministic with wrapped evidence lines"
+    );
+    expect(acceptanceMd).toContain("- AC-2: preserve provenance-aware excerpts");
+    expect(acceptanceMd).toContain("- AC-3: avoid duplicated acceptance identifiers");
+    expect(acceptanceMd).toContain("- AC-4: keep bullets machine-addressable");
+    expect(acceptanceMd).toContain("- AC-5: Quality Bar: every artifact handoff stays reviewable.");
+    expect(acceptanceMd).not.toContain("AC-7:");
+    expect(acceptanceMd).not.toContain("- AC-2: - ");
+    expect(acceptanceMd).not.toContain("- AC-3: * ");
+    expect(acceptanceMd).not.toContain("Quality Bar: Quality Bar:");
+  });
 });
