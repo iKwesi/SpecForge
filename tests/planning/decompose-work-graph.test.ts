@@ -156,6 +156,8 @@ describe("decomposeToWorkGraph success paths", () => {
     expect(result.work_graph.epics).toHaveLength(1);
     const tasks = result.work_graph.epics[0]?.stories[0]?.tasks;
     expect(tasks?.map((task) => task.id)).toEqual(["TASK-1", "TASK-2"]);
+    expect(tasks?.[0]?.title).toBe("Satisfy AC-1: system emits deterministic dag output");
+    expect(tasks?.[1]?.title).toBe("Satisfy AC-2: tasks reference acceptance criteria and contracts");
     expect(tasks?.[0]?.acceptance_refs).toEqual(["AC-1"]);
     expect(tasks?.[0]?.contract_refs).toEqual(["schemas/core.schema.json", "spec.contracts"]);
     expect(tasks?.[1]?.depends_on).toEqual(["TASK-1"]);

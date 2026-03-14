@@ -97,6 +97,8 @@ describe("idea -> PRD -> plan integration", () => {
 
     const tasks = workGraph.work_graph.epics[0]?.stories[0]?.tasks;
     expect(tasks?.map((task) => task.id)).toEqual(["TASK-1", "TASK-2"]);
+    expect(tasks?.[0]?.title).toContain("Satisfy AC-1: Evaluation:");
+    expect(tasks?.[0]?.title).not.toContain("Satisfy AC-1: AC-1:");
     expect(tasks?.[0]?.contract_refs).toEqual(["schemas/core.schema.json", "spec.contracts"]);
     expect(tasks?.[1]?.depends_on).toEqual(["TASK-1"]);
 
@@ -124,6 +126,9 @@ describe("idea -> PRD -> plan integration", () => {
       artifact_id: "schema.core",
       artifact_version: "v1"
     });
+    expect(contextPack.context_pack.entries[1]?.excerpt).toBe(
+      "Evaluation: The planning chain should produce stable artifacts that downstream operations can consume without translation."
+    );
     expect(contextPack.context_pack.entries[3]?.source_ref).toEqual({
       artifact_id: "spec.main",
       artifact_version: "v1"

@@ -278,12 +278,12 @@ function extractAcceptanceCriteria(content: string): AcceptanceCriterion[] {
 
   const bulletItems = lines
     .filter((line) => line.startsWith("- "))
-    .map((line) => line.slice(2).trim())
+    .map((line) => stripAcceptanceIdPrefix(line.slice(2).trim()))
     .filter((line) => line.length > 0);
 
   const criteriaText = bulletItems.length > 0
     ? bulletItems
-    : lines.map((line) => line.trim()).filter((line) => line.length > 0);
+    : lines.map((line) => stripAcceptanceIdPrefix(line.trim())).filter((line) => line.length > 0);
 
   if (criteriaText.length === 0) {
     return [{ id: "AC-1", text: "Satisfy acceptance criteria." }];
@@ -293,6 +293,10 @@ function extractAcceptanceCriteria(content: string): AcceptanceCriterion[] {
     id: `AC-${index + 1}`,
     text
   }));
+}
+
+function stripAcceptanceIdPrefix(value: string): string {
+  return value.replace(/^AC-\d+:\s*/i, "").trim();
 }
 
 function buildContractRefs(schemaPath: string): string[] {
