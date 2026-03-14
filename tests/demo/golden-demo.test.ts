@@ -4,9 +4,21 @@ import { tmpdir } from "node:os";
 
 import { describe, expect, it } from "vitest";
 
-import { runGoldenDemo } from "../../src/demo/goldenDemo.js";
+import { GoldenDemoError, runGoldenDemo } from "../../src/demo/goldenDemo.js";
 
 describe("golden demo", () => {
+  it("rejects unsafe workspace roots before deleting anything", async () => {
+    await expect(
+      runGoldenDemo({
+        workspace_root: process.cwd()
+      })
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<GoldenDemoError>>({
+        code: "unsafe_workspace_root"
+      })
+    );
+  });
+
   it("executes the canonical workflow and writes a regression manifest", async () => {
     const workspaceRoot = await mkdtemp(join(tmpdir(), "specforge-golden-demo-"));
 
@@ -14,9 +26,9 @@ describe("golden demo", () => {
       workspace_root: workspaceRoot
     });
 
-    expect(result.repository_root).toBe(join(workspaceRoot, "repository"));
-    expect(result.artifact_root).toBe(join(workspaceRoot, "artifacts"));
-    expect(result.manifest_path).toBe(join(workspaceRoot, "golden-demo-manifest.json"));
+    expect(result.repository_root).toBe(join(result.workspace_root, "repository"));
+    expect(result.artifact_root).toBe(join(result.workspace_root, "artifacts"));
+    expect(result.manifest_path).toBe(join(result.workspace_root, "golden-demo-manifest.json"));
 
     expect(result.command_outputs.doctor).toContain("SpecForge Doctor");
     expect(result.command_outputs.inspect).toContain("SpecForge Inspect");
@@ -36,7 +48,7 @@ describe("golden demo", () => {
     const manifest = JSON.parse(await readFile(result.manifest_path, "utf8"));
     expect(manifest.scenario_id).toBe("golden-demo.existing-repo");
     expect(manifest.artifacts.task_execution_result.path).toBe(
-      join(workspaceRoot, "artifacts", ".specforge", "task-results", "TASK-1.json")
+      join(result.workspace_root, "artifacts", ".specforge", "task-results", "TASK-1.json")
     );
     expect(manifest.command_outputs.inspect).toContain("Architecture Summary");
     expect(manifest.command_outputs.status).toContain("Overall Status: success");

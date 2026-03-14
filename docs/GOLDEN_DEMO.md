@@ -16,6 +16,8 @@ To write the demo workspace somewhere specific:
 pnpm demo:golden -- --workspace-root ./tmp/specforge-golden-demo
 ```
 
+For safety, custom workspace roots must stay under `./tmp`, `./.tmp`, or your OS temp directory. The demo resets that workspace before it copies the fixture repository.
+
 ## What It Does
 
 The demo copies a small existing-repo fixture into an isolated workspace, initializes it as a git repository, and then runs the following workflow:

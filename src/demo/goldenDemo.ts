@@ -1,6 +1,7 @@
 import { execFile } from "node:child_process";
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { cp, mkdir, realpath, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 
@@ -18,6 +19,7 @@ const execFileAsync = promisify(execFile);
 const TEMPLATE_REPOSITORY_ROOT = fileURLToPath(
   new URL("../../examples/golden-demo/repository-template", import.meta.url)
 );
+const PROJECT_ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
 const DEMO_TIMESTAMPS = {
   inspect: new Date("2026-03-14T10:00:00.000Z"),
@@ -74,6 +76,16 @@ export interface RunGoldenDemoInput {
   workspace_root: string;
 }
 
+export class GoldenDemoError extends Error {
+  readonly code: "unsafe_workspace_root";
+
+  constructor(message: string) {
+    super(message);
+    this.name = "GoldenDemoError";
+    this.code = "unsafe_workspace_root";
+  }
+}
+
 /**
  * Execute the canonical SpecForge demo against a small existing-repo fixture.
  *
@@ -82,7 +94,7 @@ export interface RunGoldenDemoInput {
  * simulated so the demo stays deterministic and runnable without live PR state.
  */
 export async function runGoldenDemo(input: RunGoldenDemoInput): Promise<GoldenDemoResult> {
-  const workspaceRoot = input.workspace_root;
+  const workspaceRoot = await resolveWorkspaceRoot(input.workspace_root);
   const repositoryRoot = join(workspaceRoot, "repository");
   const artifactRoot = join(workspaceRoot, "artifacts");
   const manifestPath = join(workspaceRoot, "golden-demo-manifest.json");
@@ -335,6 +347,76 @@ export async function runGoldenDemo(input: RunGoldenDemoInput): Promise<GoldenDe
 async function resetWorkspace(workspaceRoot: string): Promise<void> {
   await rm(workspaceRoot, { recursive: true, force: true });
   await mkdir(workspaceRoot, { recursive: true });
+}
+
+async function resolveWorkspaceRoot(workspaceRoot: string): Promise<string> {
+  const resolvedWorkspaceRoot = await resolvePlannedPath(workspaceRoot);
+  const projectRoot = await resolvePlannedPath(PROJECT_ROOT);
+  const processRoot = await resolvePlannedPath(process.cwd());
+  const projectTmpRoot = await resolvePlannedPath(join(process.cwd(), "tmp"));
+  const projectDotTmpRoot = await resolvePlannedPath(join(process.cwd(), ".tmp"));
+  const osTmpRoot = await resolvePlannedPath(tmpdir());
+
+  if (isFilesystemRoot(resolvedWorkspaceRoot)) {
+    throw new GoldenDemoError(
+      "workspace_root must not be the filesystem root. Use a child directory under ./tmp, ./.tmp, or the OS temp directory."
+    );
+  }
+
+  if (
+    resolvedWorkspaceRoot === processRoot ||
+    resolvedWorkspaceRoot === projectRoot ||
+    resolvedWorkspaceRoot === projectTmpRoot ||
+    resolvedWorkspaceRoot === projectDotTmpRoot ||
+    resolvedWorkspaceRoot === osTmpRoot
+  ) {
+    throw new GoldenDemoError(
+      "workspace_root must be a dedicated child directory under ./tmp, ./.tmp, or the OS temp directory."
+    );
+  }
+
+  const allowedBases = [projectTmpRoot, projectDotTmpRoot, osTmpRoot];
+  if (!allowedBases.some((base) => isStrictDescendant(base, resolvedWorkspaceRoot))) {
+    throw new GoldenDemoError(
+      "workspace_root must stay within ./tmp, ./.tmp, or the OS temp directory to avoid deleting unrelated files."
+    );
+  }
+
+  return resolvedWorkspaceRoot;
+}
+
+async function resolvePlannedPath(path: string): Promise<string> {
+  let current = resolve(path);
+  const pendingSegments: string[] = [];
+
+  while (true) {
+    try {
+      const existingPath = await realpath(current);
+      return pendingSegments.reduce((accumulator, segment) => join(accumulator, segment), existingPath);
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT") {
+        throw error;
+      }
+
+      const parent = dirname(current);
+      if (parent === current) {
+        return current;
+      }
+
+      pendingSegments.unshift(basename(current));
+      current = parent;
+    }
+  }
+}
+
+function isFilesystemRoot(path: string): boolean {
+  return dirname(path) === path;
+}
+
+function isStrictDescendant(base: string, candidate: string): boolean {
+  const relativePath = relative(base, candidate);
+  return relativePath.length > 0 && !relativePath.startsWith("..") && !isAbsolute(relativePath);
 }
 
 async function copyFixtureRepository(repositoryRoot: string): Promise<void> {
