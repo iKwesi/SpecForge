@@ -151,8 +151,11 @@ export async function runGenerateSpecPack(
   const previousVersion = await readExistingSpecVersion(input.artifact_dir);
   const specMarkdownContent = renderSpecMarkdown(sections);
 
-  const specMetadata = createSpecMetadata({
-    artifact_id: "spec.md",
+  // The in-memory spec contract and the markdown file are separate artifacts.
+  // They share section content, but downstream planners expect the contract
+  // artifact to retain the stable "spec.main" identifier.
+  const specContractMetadata = createSpecMetadata({
+    artifact_id: "spec.main",
     content: specMarkdownContent,
     source_refs: sourceRefs,
     ...(previousVersion ? { previous_version: previousVersion } : {}),
@@ -161,7 +164,7 @@ export async function runGenerateSpecPack(
 
   const spec_artifact = {
     kind: "spec" as const,
-    metadata: specMetadata,
+    metadata: specContractMetadata,
     sections,
     source_refs: sourceRefs
   };
@@ -238,7 +241,13 @@ export async function runGenerateSpecPack(
 
   const spec_md: SpecMarkdownArtifact = {
     kind: "spec_markdown",
-    metadata: specMetadata,
+    metadata: createSpecMetadata({
+      artifact_id: "spec.md",
+      content: specMarkdownContent,
+      source_refs: sourceRefs,
+      ...(previousVersion ? { previous_version: previousVersion } : {}),
+      ...(input.created_timestamp ? { created_timestamp: input.created_timestamp } : {})
+    }),
     source_refs: sourceRefs,
     project_mode: input.project_mode,
     sections,
@@ -416,7 +425,19 @@ function renderSchemaContent(prd: PrdJsonArtifact): string {
 }
 
 function renderAcceptanceContent(acceptanceCriteriaSection: string): string {
-  return ["# Acceptance Criteria", "", acceptanceCriteriaSection].join("\n");
+  // Downstream planners and context packs rely on stable AC-* identifiers.
+  // We normalize the acceptance section into canonical bullets here so the
+  // generated acceptance artifact stays machine-addressable across operations.
+  const criteria = acceptanceCriteriaSection
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0 && !line.startsWith("#"));
+
+  const bulletLines = (criteria.length > 0 ? criteria : ["Satisfy acceptance criteria."]).map(
+    (criterion, index) => `- AC-${index + 1}: ${criterion}`
+  );
+
+  return ["# Acceptance Criteria", "", ...bulletLines].join("\n");
 }
 
 function renderDecisionsContent(decisionsSection: string): string {
@@ -441,6 +462,7 @@ function renderInitialDag(): string {
 
 interface CreateSpecMetadataInput {
   artifact_id:
+    | "spec.main"
     | "spec.md"
     | "schema.core"
     | "acceptance.core"
@@ -564,4 +586,3 @@ async function writeSpecPackArtifacts(input: WriteSpecPackArtifactsInput): Promi
 function normalizeText(value?: string): string {
   return (value ?? "").trim();
 }
-

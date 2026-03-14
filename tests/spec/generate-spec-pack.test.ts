@@ -110,6 +110,8 @@ describe("generateSpecPack success paths", () => {
     expect(Object.keys(result.spec_artifact.sections)).toEqual([...SPEC_REQUIRED_SECTIONS]);
     expect(result.validation_issues).toEqual([]);
 
+    expect(result.spec_artifact.metadata.artifact_id).toBe("spec.main");
+    expect(result.spec_artifact.metadata.artifact_version).toBe("v1");
     expect(result.spec_md.metadata.artifact_id).toBe("spec.md");
     expect(result.spec_md.metadata.artifact_version).toBe("v1");
     expect(result.spec_index.metadata.artifact_id).toBe("spec.index");
@@ -133,6 +135,10 @@ describe("generateSpecPack success paths", () => {
       await readFile(join(artifactDir, "schemas", "core.schema.json"), "utf8")
     );
     expect(schemaJson.title).toBe("SpecForgeCoreContract");
+
+    const acceptanceMd = await readFile(join(artifactDir, "acceptance", "core.md"), "utf8");
+    expect(acceptanceMd).toContain("- AC-1:");
+    expect(acceptanceMd).toContain("- AC-2:");
 
     const indexJson = JSON.parse(await readFile(join(artifactDir, "spec", "index.json"), "utf8"));
     expect(indexJson.metadata.artifact_id).toBe("spec.index");
@@ -160,10 +166,11 @@ describe("generateSpecPack success paths", () => {
       created_timestamp: new Date("2026-03-11T12:10:00.000Z")
     });
 
+    expect(second.spec_artifact.metadata.artifact_version).toBe("v2");
+    expect(second.spec_artifact.metadata.parent_version).toBe("v1");
     expect(second.spec_md.metadata.artifact_version).toBe("v2");
     expect(second.spec_md.metadata.parent_version).toBe("v1");
     expect(second.spec_index.metadata.artifact_version).toBe("v2");
     expect(second.spec_index.metadata.parent_version).toBe("v1");
   });
 });
-
