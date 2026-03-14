@@ -12,6 +12,11 @@ describe("golden demo docs", () => {
     expect(docs).toContain("sf explain");
     expect(docs).toContain("simulated GitHub status output");
     expect(docs).toContain("golden-demo-manifest.json");
+    expect(docs).toContain("not an exhaustive list");
+    expect(docs).toContain("artifacts/spec/dag.yaml");
+    expect(docs).toContain("artifacts/schemas/core.schema.json");
+    expect(docs).toContain("artifacts/acceptance/core.md");
+    expect(docs).toContain("artifacts/decisions.md");
     expect(readme).toContain("Golden Demo");
   });
 

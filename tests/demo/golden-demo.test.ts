@@ -47,10 +47,20 @@ describe("golden demo", () => {
 
     const manifest = JSON.parse(await readFile(result.manifest_path, "utf8"));
     expect(manifest.scenario_id).toBe("golden-demo.existing-repo");
+    expect(manifest.workspace_root).toBe(".");
+    expect(manifest.repository_root).toBe("repository");
+    expect(manifest.artifact_root).toBe("artifacts");
     expect(manifest.artifacts.task_execution_result.path).toBe(
-      join(result.workspace_root, "artifacts", ".specforge", "task-results", "TASK-1.json")
+      join("artifacts", ".specforge", "task-results", "TASK-1.json")
     );
+    expect(manifest.command_outputs.doctor).toContain(
+      "PASS node_version - Node.js satisfies the minimum runtime requirement."
+    );
+    expect(manifest.command_outputs.doctor).toContain("PASS git_binary - Git binary detected.");
+    expect(manifest.command_outputs.doctor).not.toContain(result.workspace_root);
     expect(manifest.command_outputs.inspect).toContain("Architecture Summary");
+    expect(manifest.command_outputs.inspect).not.toContain(result.workspace_root);
+    expect(manifest.command_outputs.explain).not.toContain(result.workspace_root);
     expect(manifest.command_outputs.status).toContain("Overall Status: success");
   });
 });

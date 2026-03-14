@@ -330,14 +330,7 @@ export async function runGoldenDemo(input: RunGoldenDemoInput): Promise<GoldenDe
     }
   };
 
-  const manifest: GoldenDemoManifest = {
-    scenario_id: "golden-demo.existing-repo",
-    workspace_root: result.workspace_root,
-    repository_root: result.repository_root,
-    artifact_root: result.artifact_root,
-    command_outputs: result.command_outputs,
-    artifacts: result.artifacts
-  };
+  const manifest = createGoldenDemoManifest(result);
 
   await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
@@ -417,6 +410,72 @@ function isFilesystemRoot(path: string): boolean {
 function isStrictDescendant(base: string, candidate: string): boolean {
   const relativePath = relative(base, candidate);
   return relativePath.length > 0 && !relativePath.startsWith("..") && !isAbsolute(relativePath);
+}
+
+function createGoldenDemoManifest(result: GoldenDemoResult): GoldenDemoManifest {
+  return {
+    scenario_id: "golden-demo.existing-repo",
+    workspace_root: ".",
+    repository_root: relativizePathFromWorkspace(result.workspace_root, result.repository_root),
+    artifact_root: relativizePathFromWorkspace(result.workspace_root, result.artifact_root),
+    command_outputs: {
+      doctor: normalizeDoctorReportForManifest(result.command_outputs.doctor, result.workspace_root),
+      inspect: normalizeWorkspaceBoundText(result.command_outputs.inspect, result.workspace_root),
+      explain: normalizeWorkspaceBoundText(result.command_outputs.explain, result.workspace_root),
+      status: result.command_outputs.status
+    },
+    artifacts: Object.fromEntries(
+      Object.entries(result.artifacts).map(([artifactKey, artifact]) => [
+        artifactKey,
+        {
+          ...artifact,
+          path: relativizePathFromWorkspace(result.workspace_root, artifact.path)
+        }
+      ])
+    ) as GoldenDemoResult["artifacts"]
+  };
+}
+
+function normalizeDoctorReportForManifest(report: string, workspaceRoot: string): string {
+  const normalizedLines = report.split("\n").map((line) => {
+    if (line.startsWith("PASS node_version - ")) {
+      return "PASS node_version - Node.js satisfies the minimum runtime requirement.";
+    }
+
+    if (line.startsWith("PASS git_binary - ")) {
+      return "PASS git_binary - Git binary detected.";
+    }
+
+    if (line.startsWith("PASS pnpm_binary - ")) {
+      return "PASS pnpm_binary - pnpm package manager detected.";
+    }
+
+    if (line.startsWith("PASS repository_root - ")) {
+      return "PASS repository_root - Git repository detected.";
+    }
+
+    return line;
+  });
+
+  return normalizeWorkspaceBoundText(normalizedLines.join("\n"), workspaceRoot);
+}
+
+function normalizeWorkspaceBoundText(text: string, workspaceRoot: string): string {
+  const escapedWorkspaceRoot = escapeRegExp(workspaceRoot);
+  return text.replace(new RegExp(escapedWorkspaceRoot, "g"), ".");
+}
+
+function relativizePathFromWorkspace(workspaceRoot: string, targetPath: string): string {
+  if (!isAbsolute(targetPath)) {
+    return targetPath;
+  }
+
+  const relativePath = relative(workspaceRoot, targetPath);
+  return relativePath.length === 0 ? "." : relativePath;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 async function copyFixtureRepository(repositoryRoot: string): Promise<void> {

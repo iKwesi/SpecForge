@@ -37,7 +37,7 @@ The demo copies a small existing-repo fixture into an isolated workspace, initia
 
 ## Outputs
 
-The demo writes these key files into the chosen workspace:
+The demo writes these key files into the chosen workspace. This is not an exhaustive list:
 
 - `repository/` — a copied fixture repository used for brownfield inspection
 - `artifacts/.specforge/repo_profile.json`
@@ -47,12 +47,16 @@ The demo writes these key files into the chosen workspace:
 - `artifacts/PRD.json`
 - `artifacts/SPEC.md`
 - `artifacts/spec/index.json`
+- `artifacts/spec/dag.yaml`
+- `artifacts/schemas/core.schema.json`
+- `artifacts/acceptance/core.md`
+- `artifacts/decisions.md`
 - `artifacts/.specforge/context-packs/TASK-1.json`
 - `artifacts/.specforge/task-results/TASK-1.json`
 - `artifacts/.specforge/critic-results/TASK-1.json`
 - `golden-demo-manifest.json`
 
-`golden-demo-manifest.json` is the regression baseline. It captures command outputs plus the artifact ids, versions, and paths that the workflow produced.
+`golden-demo-manifest.json` is the regression baseline. It captures normalized command outputs plus the artifact ids, versions, and workspace-relative paths that the workflow produced.
 
 ## Why It Exists
 
