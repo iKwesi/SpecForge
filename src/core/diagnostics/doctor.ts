@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-import { ARTIFACT_GATES, PROJECT_MODES } from "../contracts/domain.js";
 import {
   createDefaultPolicyConfig,
+  validatePolicyConfig,
   type SpecForgePolicyConfig
 } from "../contracts/policy.js";
 
@@ -210,31 +210,17 @@ async function checkRepositoryRoot(input: {
 }
 
 function checkPolicyConfig(policy: SpecForgePolicyConfig): DoctorCheck {
-  const gateKeys = Object.keys(policy.gates.enabled_by_default);
-  const enabledGatesValid =
-    gateKeys.length === ARTIFACT_GATES.length &&
-    ARTIFACT_GATES.every((gate) => typeof policy.gates.enabled_by_default[gate] === "boolean");
+  const validation = validatePolicyConfig(policy);
+  if (!validation.valid) {
+    const firstIssue = validation.issues[0];
 
-  const applicableModesValid = Object.values(policy.gates.applicable_project_modes).every((modes) =>
-    (modes ?? []).every((mode) => PROJECT_MODES.includes(mode))
-  );
-
-  const parallelismValid =
-    Number.isInteger(policy.parallelism.max_concurrent_tasks) &&
-    policy.parallelism.max_concurrent_tasks > 0 &&
-    typeof policy.parallelism.serialize_on_uncertainty === "boolean";
-
-  const coverageValid =
-    policy.coverage.scope === "changed-lines" &&
-    (policy.coverage.enforcement === "report-only" || policy.coverage.enforcement === "hard-block");
-
-  if (!enabledGatesValid || !applicableModesValid || !parallelismValid || !coverageValid) {
     return {
       id: "policy_config",
       label: "Policy config",
       status: "fail",
-      message: "Policy configuration is invalid for the current v1 contract.",
-      remediation: "Restore a valid gate, parallelism, and coverage policy configuration."
+      message: `Policy configuration is invalid: ${firstIssue?.path ?? "$"} ${firstIssue?.message ?? "invalid policy shape."}`,
+      remediation:
+        "Update the policy config to match docs/POLICY_CONFIG.md or docs/examples/specforge.policy.example.json."
     };
   }
 
