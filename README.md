@@ -51,6 +51,10 @@ pnpm typecheck
 pnpm build
 ```
 
+## Golden Demo
+
+Run `pnpm demo:golden` to execute the canonical existing-repo walkthrough and generate a regression manifest. The full workflow and outputs are documented in [docs/GOLDEN_DEMO.md](./docs/GOLDEN_DEMO.md).
+
 ## Contributing
 
 - Contributor guide: [CONTRIBUTING.md](./CONTRIBUTING.md)
