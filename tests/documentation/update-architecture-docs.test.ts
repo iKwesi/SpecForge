@@ -76,6 +76,23 @@ function buildArchitectureSummary(repositoryRoot: string): ArchitectureSummaryAr
 }
 
 describe("updateArchitectureDocs failure paths", () => {
+  it("rejects a missing repository root before attempting any generated writes", async () => {
+    const missingRoot = join(tmpdir(), "specforge-architecture-docs-missing", String(Date.now()));
+
+    await expect(
+      runUpdateArchitectureDocs({
+        project_mode: "existing-repo",
+        repository_root: missingRoot,
+        repo_profile: buildRepoProfile(missingRoot),
+        architecture_summary: buildArchitectureSummary(missingRoot)
+      })
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<UpdateArchitectureDocsError>>({
+        code: "repository_not_found"
+      })
+    );
+  });
+
   it("rejects mismatched repository roots between repo_profile and architecture_summary", async () => {
     const repoRoot = await mkdtemp(join(tmpdir(), "specforge-architecture-docs-"));
 

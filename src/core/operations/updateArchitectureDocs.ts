@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 import { createDryRunReport, type DryRunReport } from "../contracts/dryRun.js";
@@ -15,10 +15,12 @@ const ARCHITECTURE_SUMMARY_MARKDOWN_RELATIVE_PATH = join(".specforge", "architec
 
 export type UpdateArchitectureDocsErrorCode =
   | "invalid_mode"
+  | "repository_not_found"
   | "insufficient_repo_profile"
   | "insufficient_architecture_summary"
   | "artifact_mismatch"
   | "invalid_docs_state"
+  | "docs_read_failed"
   | "summary_write_failed"
   | "docs_write_failed";
 
@@ -72,10 +74,12 @@ export const UPDATE_ARCHITECTURE_DOCS_OPERATION_CONTRACT: OperationContract<
   ],
   failure_modes: [
     "invalid_mode",
+    "repository_not_found",
     "insufficient_repo_profile",
     "insufficient_architecture_summary",
     "artifact_mismatch",
     "invalid_docs_state",
+    "docs_read_failed",
     "summary_write_failed",
     "docs_write_failed"
   ],
@@ -99,6 +103,7 @@ export async function runUpdateArchitectureDocs(
   input: UpdateArchitectureDocsInput
 ): Promise<UpdateArchitectureDocsResult> {
   ensureSupportedMode(input.project_mode);
+  await ensureRepositoryRootExists(input.repository_root);
   const repoProfile = ensureRepoProfile(input.repo_profile);
   const architectureSummary = ensureArchitectureSummary(input.architecture_summary);
   ensureSharedRepositoryRoot(input.repository_root, repoProfile, architectureSummary);
@@ -147,6 +152,28 @@ export async function runUpdateArchitectureDocs(
         }
       : {})
   };
+}
+
+async function ensureRepositoryRootExists(repositoryRoot: string): Promise<void> {
+  try {
+    const stats = await lstat(repositoryRoot);
+    if (!stats.isDirectory()) {
+      throw new UpdateArchitectureDocsError(
+        "repository_not_found",
+        `Repository root is not a directory: ${repositoryRoot}`
+      );
+    }
+  } catch (error) {
+    if (error instanceof UpdateArchitectureDocsError) {
+      throw error;
+    }
+
+    throw new UpdateArchitectureDocsError(
+      "repository_not_found",
+      `Repository root was not found: ${repositoryRoot}`,
+      error
+    );
+  }
 }
 
 function ensureSupportedMode(projectMode: ProjectMode): asserts projectMode is "existing-repo" {
@@ -207,7 +234,7 @@ async function readExistingDocs(path: string): Promise<string | undefined> {
     }
 
     throw new UpdateArchitectureDocsError(
-      "docs_write_failed",
+      "docs_read_failed",
       `Unable to read architecture docs at ${path}.`,
       error
     );
