@@ -19,6 +19,12 @@ import {
   type InspectResult,
   type RunInspectInput
 } from "./core/diagnostics/inspect.js";
+import {
+  formatStatusReport,
+  runStatus,
+  type RunStatusInput,
+  type StatusResult
+} from "./core/diagnostics/status.js";
 
 interface CliWriter {
   write(chunk: string): boolean | void;
@@ -33,6 +39,8 @@ export interface CliDependencies {
   explain_input?: Partial<RunExplainInput>;
   inspect_runner?: (input?: RunInspectInput) => Promise<InspectResult>;
   inspect_input?: Partial<RunInspectInput>;
+  status_runner?: (input: RunStatusInput) => Promise<StatusResult>;
+  status_input?: Partial<RunStatusInput>;
 }
 
 class CliExitSignal extends Error {
@@ -54,6 +62,8 @@ export function createProgram(dependencies: CliDependencies = {}): Command {
   const explainInput = dependencies.explain_input;
   const inspectRunner = dependencies.inspect_runner ?? runInspect;
   const inspectInput = dependencies.inspect_input;
+  const statusRunner = dependencies.status_runner ?? runStatus;
+  const statusInput = dependencies.status_input;
   const program = new Command();
 
   program.exitOverride();
@@ -76,14 +86,19 @@ Examples:
   $ specforge explain --artifact-file .specforge/task-results/TASK-1.json
     Explain an artifact using deterministic evidence from related inputs.
 
+  $ specforge status --repo iKwesi/SpecForge --pr 123
+    Report pull request state and CI outcomes from GitHub.
+
 Workflow guide:
   1. Run 'specforge doctor' before making changes to confirm your environment is ready.
   2. Run 'specforge inspect' to profile a repository and generate architecture artifacts.
   3. Run 'specforge explain' when you need traceable reasoning for generated artifacts.
+  4. Run 'specforge status' to inspect pull request and CI state after handoff.
 
 Artifacts:
   - 'inspect' writes repository profile and architecture summary artifacts.
   - 'explain' reads one or more artifact files plus optional policy/schedule evidence.
+  - 'status' reads pull request state and status checks from GitHub.
   - 'doctor' reports readiness and exits non-zero when blocking issues are found.
 `
     );
@@ -168,6 +183,36 @@ The command reads artifact inputs and optional policy/schedule context, then pri
         });
 
         stdout.write(formatExplainReport(result));
+      } catch (error) {
+        stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+        throw new CliExitSignal(1);
+      }
+    });
+
+  program
+    .command("status")
+    .description("Report GitHub pull request state and CI outcomes. Example: specforge status --repo iKwesi/SpecForge --pr 123")
+    .requiredOption("--pr <ref>", "Pull request number, URL, or branch to inspect")
+    .option("--repo <owner/repo>", "GitHub repository slug when --pr is not a pull request URL")
+    .addHelpText(
+      "after",
+      `
+Examples:
+  $ specforge status --repo iKwesi/SpecForge --pr 123
+  $ specforge status --pr https://github.com/iKwesi/SpecForge/pull/123
+
+Use this after PR handoff when you need the latest GitHub merge state and status checks.
+`
+    )
+    .action(async (options: { pr: string; repo?: string }) => {
+      try {
+        const result = await statusRunner({
+          pull_request: options.pr,
+          ...(options.repo ? { repository: options.repo } : {}),
+          ...(statusInput ?? {})
+        });
+
+        stdout.write(formatStatusReport(result));
       } catch (error) {
         stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
         throw new CliExitSignal(1);
