@@ -1,12 +1,9 @@
 import { readFile } from "node:fs/promises";
 
 import { ARTIFACT_GATES } from "../contracts/domain.js";
-import {
-  formatPolicyValidationIssues,
-  validatePolicyConfig,
-  type SpecForgePolicyConfig
-} from "../contracts/policy.js";
+import { type SpecForgePolicyConfig } from "../contracts/policy.js";
 import type { ConservativeSchedule, ConservativeScheduleBatch } from "../execution/scheduler.js";
+import { evaluatePolicyConfigCheck } from "../policy/enforcement.js";
 
 export type ExplainErrorCode =
   | "missing_artifact_input"
@@ -200,12 +197,12 @@ async function readArtifactEvidence(path: string): Promise<ExplainArtifactEviden
 
 async function readPolicyEvidence(path: string): Promise<ExplainPolicyEvidence> {
   const value = await readJsonFile(path, "policy_read_failed");
-  const validation = validatePolicyConfig(value);
-  if (!validation.valid) {
+  const policyCheck = evaluatePolicyConfigCheck(value);
+  if (policyCheck.status === "fail") {
     throw new ExplainError(
       "invalid_policy",
-      `Invalid policy file: ${path}. ${formatPolicyValidationIssues(validation.issues)}`,
-      validation.issues
+      `Invalid policy file: ${path}. ${policyCheck.message.replace(/^Policy configuration is invalid: /, "")}`,
+      policyCheck.issues
     );
   }
   const policy = value as SpecForgePolicyConfig;
