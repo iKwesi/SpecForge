@@ -136,4 +136,31 @@ describe("sf inspect command", () => {
     expect(stdout).toContain("Dry Run: enabled");
     expect(stdout).toContain("Would publish repo_profile artifact metadata");
   });
+
+  it("passes architecture docs flags through to inspect", async () => {
+    let receivedWriteArchitectureDocs = false;
+    let receivedDocsPath: string | undefined;
+
+    const exitCode = await runCli(
+      [
+        "node",
+        "sf",
+        "inspect",
+        "--write-architecture-docs",
+        "--docs-path",
+        "/workspace/specforge/docs/ARCHITECTURE.md"
+      ],
+      {
+        inspect_runner: async (input) => {
+          receivedWriteArchitectureDocs = input?.write_architecture_docs === true;
+          receivedDocsPath = input?.docs_path;
+          return buildInspectResult();
+        }
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(receivedWriteArchitectureDocs).toBe(true);
+    expect(receivedDocsPath).toBe("/workspace/specforge/docs/ARCHITECTURE.md");
+  });
 });

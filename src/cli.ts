@@ -229,6 +229,14 @@ Use this after PR handoff when you need the latest GitHub merge state and status
     )
     .option("--deep", "Increase the bounded scan budget for deeper repository inspection")
     .option("--dry-run", "Report planned artifact writes without publishing them")
+    .option(
+      "--write-architecture-docs",
+      "Generate maintained architecture markdown from the inspect artifacts"
+    )
+    .option(
+      "--docs-path <path>",
+      "Optional docs/ARCHITECTURE.md target when --write-architecture-docs is enabled"
+    )
     .addHelpText(
       "after",
       `
@@ -236,10 +244,12 @@ Examples:
   $ specforge inspect
   $ specforge inspect --repository-root ../my-repo --artifact-dir ../my-repo --deep
   $ specforge inspect --repository-root . --dry-run
+  $ specforge inspect --repository-root . --write-architecture-docs
 
 What it produces:
   - a repository profile artifact
   - an architecture summary artifact
+  - optional maintained architecture markdown when explicitly requested
 
 Use this before planning or task decomposition when you need a bounded view of an existing codebase.
 `
@@ -250,6 +260,8 @@ Use this before planning or task decomposition when you need a bounded view of a
         artifactDir?: string;
         deep?: boolean;
         dryRun?: boolean;
+        writeArchitectureDocs?: boolean;
+        docsPath?: string;
       }) => {
         try {
           const result = await inspectRunner({
@@ -257,6 +269,8 @@ Use this before planning or task decomposition when you need a bounded view of a
             ...(options.artifactDir ? { artifact_dir: options.artifactDir } : {}),
             ...(options.deep ? { deep: true } : {}),
             ...(options.dryRun ? { dry_run: true } : {}),
+            ...(options.writeArchitectureDocs ? { write_architecture_docs: true } : {}),
+            ...(options.docsPath ? { docs_path: options.docsPath } : {}),
             ...(inspectInput ?? {})
           });
 
