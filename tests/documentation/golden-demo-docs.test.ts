@@ -24,4 +24,14 @@ describe("golden demo docs", () => {
 
     expect(fixturePackage.scripts?.start).toBeUndefined();
   });
+
+  it("keeps the fixture CLI module free of script-style side effects", async () => {
+    const fixtureCli = await readFile(
+      "examples/golden-demo/repository-template/src/cli/main.ts",
+      "utf8"
+    );
+
+    expect(fixtureCli).not.toContain("process.argv");
+    expect(fixtureCli).not.toContain("process.stdout.write");
+  });
 });
