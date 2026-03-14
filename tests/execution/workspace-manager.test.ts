@@ -80,6 +80,43 @@ describe("workspace manager", () => {
     expect(worktrees.filter((worktree) => worktree.branch_name === "feat/task-1")).toHaveLength(1);
   });
 
+  it("reports planned branch and worktree creation without mutating git state in dry_run mode", async () => {
+    const repoRoot = await createRepository();
+    const workspaceRoot = await mkdtemp(join(tmpdir(), "specforge-workspaces-"));
+    const provider = createNativeGitProvider();
+
+    const result = await prepareTaskWorkspace({
+      repo_root: repoRoot,
+      workspace_root: workspaceRoot,
+      task_id: "TASK-1",
+      git_provider: provider,
+      dry_run: true
+    });
+
+    expect(result.created).toBe(false);
+    expect(result.dry_run).toEqual({
+      enabled: true,
+      changes: [
+        {
+          status: "planned",
+          kind: "branch_create",
+          target: "feat/task-1",
+          detail: "Would create or reuse the task branch for isolated execution."
+        },
+        {
+          status: "planned",
+          kind: "workspace_prepare",
+          target: join(workspaceRoot, "task-1"),
+          detail: "Would prepare an isolated task worktree without mutating the current checkout."
+        }
+      ]
+    });
+
+    expect(await runGit(["branch", "--list", "feat/task-1"], repoRoot)).toBe("");
+    const worktrees = await provider.listWorktrees({ repo_root: repoRoot });
+    expect(worktrees.some((worktree) => worktree.branch_name === "feat/task-1")).toBe(false);
+  });
+
   it("recreates a cleaned task workspace even when the branch already exists", async () => {
     const repoRoot = await createRepository();
     const workspaceRoot = await mkdtemp(join(tmpdir(), "specforge-workspaces-"));

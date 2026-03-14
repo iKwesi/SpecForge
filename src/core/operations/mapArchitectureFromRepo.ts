@@ -6,6 +6,7 @@ import {
   createInitialArtifactMetadata,
   createNextArtifactMetadata
 } from "../artifacts/versioning.js";
+import { createDryRunReport, type DryRunReport } from "../contracts/dryRun.js";
 import type { ProjectMode } from "../contracts/domain.js";
 import type { OperationContract } from "../contracts/operation.js";
 import type { RepoProfileArtifact } from "./profileRepository.js";
@@ -36,11 +37,13 @@ export interface MapArchitectureFromRepoInput {
   project_mode: ProjectMode;
   repo_profile?: RepoProfileArtifact;
   artifact_dir?: string;
+  dry_run?: boolean;
   created_timestamp?: Date;
 }
 
 export interface MapArchitectureFromRepoResult {
   architecture_summary: ArchitectureSummaryArtifact;
+  dry_run?: DryRunReport;
 }
 
 export type MapArchitectureFromRepoErrorCode =
@@ -133,7 +136,7 @@ export async function runMapArchitectureFromRepo(
     summary_markdown: summaryMarkdown
   };
 
-  if (input.artifact_dir) {
+  if (input.artifact_dir && !input.dry_run) {
     await writeArchitectureSummaryArtifact({
       artifact_dir: input.artifact_dir,
       architecture_summary: architectureSummary
@@ -141,7 +144,19 @@ export async function runMapArchitectureFromRepo(
   }
 
   return {
-    architecture_summary: architectureSummary
+    architecture_summary: architectureSummary,
+    ...(input.dry_run && input.artifact_dir
+      ? {
+          dry_run: createDryRunReport([
+            {
+              status: "planned",
+              kind: "artifact_write",
+              target: join(input.artifact_dir, ".specforge", ARCHITECTURE_SUMMARY_FILENAME),
+              detail: "Would publish architecture_summary artifact metadata without mutating the repository."
+            }
+          ])
+        }
+      : {})
   };
 }
 

@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -249,5 +249,53 @@ describe("devTDDTask success paths", () => {
 
     expect(second.task_execution_result.metadata.artifact_version).toBe("v2");
     expect(second.task_execution_result.metadata.parent_version).toBe("v1");
+  });
+
+  it("reports the planned task execution artifact without writing files in dry_run mode", async () => {
+    const artifactDir = await mkdtemp(join(tmpdir(), "specforge-dev-tdd-task-dry-run-"));
+
+    const result = await runDevTddTask({
+      project_mode: "existing-repo",
+      context_pack: buildContextPack(),
+      phases: [
+        {
+          phase: "red",
+          status: "failed",
+          summary: "Added a failing acceptance-focused test.",
+          evidence: ["tests/task.test.ts"],
+          commands: ["pnpm test -- --run tests/task.test.ts"]
+        },
+        {
+          phase: "green",
+          status: "passed",
+          summary: "Implemented the minimal production change.",
+          evidence: ["src/task.ts", "tests/task.test.ts"],
+          commands: ["pnpm test -- --run tests/task.test.ts"]
+        },
+        {
+          phase: "refactor",
+          status: "passed",
+          summary: "Simplified the implementation and reran tests.",
+          evidence: ["src/task.ts"],
+          commands: ["pnpm test -- --run tests/task.test.ts", "pnpm typecheck"]
+        }
+      ],
+      artifact_dir: artifactDir,
+      dry_run: true,
+      created_timestamp: new Date("2026-03-13T13:20:00.000Z")
+    });
+
+    expect(result.dry_run).toEqual({
+      enabled: true,
+      changes: [
+        {
+          status: "planned",
+          kind: "task_execution",
+          target: "TASK-1",
+          detail: `Would publish ${join(artifactDir, ".specforge", "task-results", "TASK-1.json")} after a valid RED/GREEN/REFACTOR transcript.`
+        }
+      ]
+    });
+    expect(await readdir(artifactDir)).toEqual([]);
   });
 });

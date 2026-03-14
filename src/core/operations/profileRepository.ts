@@ -6,6 +6,7 @@ import {
   createInitialArtifactMetadata,
   createNextArtifactMetadata
 } from "../artifacts/versioning.js";
+import { createDryRunReport, type DryRunReport } from "../contracts/dryRun.js";
 import type { ProjectMode } from "../contracts/domain.js";
 import type { OperationContract } from "../contracts/operation.js";
 
@@ -62,6 +63,7 @@ export interface ProfileRepositoryInput {
   artifact_dir?: string;
   max_files?: number;
   ignore_directories?: string[];
+  dry_run?: boolean;
   created_timestamp?: Date;
 }
 
@@ -96,6 +98,7 @@ export interface RepoProfileArtifact {
 
 export interface ProfileRepositoryResult {
   repo_profile: RepoProfileArtifact;
+  dry_run?: DryRunReport;
 }
 
 export const PROFILE_REPOSITORY_OPERATION_CONTRACT: OperationContract<
@@ -153,9 +156,8 @@ export async function runProfileRepository(
     ignored_directories: [...ignoredDirectories]
   };
 
-  const previousVersion = await readExistingRepoProfileVersion(
-    resolveArtifactDirectory(input.repository_root, input.artifact_dir)
-  );
+  const resolvedArtifactDirectory = resolveArtifactDirectory(input.repository_root, input.artifact_dir);
+  const previousVersion = await readExistingRepoProfileVersion(resolvedArtifactDirectory);
 
   const content = JSON.stringify({
     repository_root: input.repository_root,
@@ -191,13 +193,27 @@ export async function runProfileRepository(
     }
   };
 
-  await writeRepoProfileArtifact({
-    artifact_dir: resolveArtifactDirectory(input.repository_root, input.artifact_dir),
-    repo_profile: repoProfile
-  });
+  if (!input.dry_run) {
+    await writeRepoProfileArtifact({
+      artifact_dir: resolvedArtifactDirectory,
+      repo_profile: repoProfile
+    });
+  }
 
   return {
-    repo_profile: repoProfile
+    repo_profile: repoProfile,
+    ...(input.dry_run
+      ? {
+          dry_run: createDryRunReport([
+            {
+              status: "planned",
+              kind: "artifact_write",
+              target: join(resolvedArtifactDirectory, REPO_PROFILE_FILENAME),
+              detail: "Would publish repo_profile artifact metadata without mutating the repository."
+            }
+          ])
+        }
+      : {})
   };
 }
 

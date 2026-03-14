@@ -1,4 +1,4 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
@@ -184,5 +184,44 @@ describe("generateProposalBrief success paths", () => {
     expect(second.proposal_summary.metadata.parent_version).toBe("v1");
     expect(second.proposal_draft.metadata.artifact_version).toBe("v2");
     expect(second.proposal_draft.metadata.parent_version).toBe("v1");
+  });
+
+  it("reports planned artifacts and blocked approval gate without writing files in dry_run mode", async () => {
+    const artifactDir = await mkdtemp(join(tmpdir(), "specforge-proposal-dry-run-"));
+
+    const result = await runGenerateProposalBrief({
+      project_mode: "feature-proposal",
+      idea_brief_status: "approved",
+      repository_ownership: "owned",
+      idea_brief: buildIdeaBrief(),
+      artifact_dir: artifactDir,
+      dry_run: true,
+      created_timestamp: new Date("2026-03-12T12:30:00.000Z")
+    });
+
+    expect(result.dry_run).toEqual({
+      enabled: true,
+      changes: [
+        {
+          status: "blocked",
+          kind: "gate_blocked",
+          target: "proposal_approval",
+          detail: "Would stop for proposal_approval before any repository-facing handoff."
+        },
+        {
+          status: "planned",
+          kind: "artifact_write",
+          target: join(artifactDir, "proposal_summary.md"),
+          detail: "Would publish proposal_summary.md for feature-proposal review."
+        },
+        {
+          status: "planned",
+          kind: "artifact_write",
+          target: join(artifactDir, "proposal_issue.md"),
+          detail: "Would publish proposal_issue.md for feature-proposal review."
+        }
+      ]
+    });
+    expect(await readdir(artifactDir)).toEqual([]);
   });
 });

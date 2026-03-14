@@ -6,6 +6,7 @@ import {
   createInitialArtifactMetadata,
   createNextArtifactMetadata
 } from "../artifacts/versioning.js";
+import { createDryRunReport, type DryRunReport } from "../contracts/dryRun.js";
 import type { ArtifactGate, ProjectMode } from "../contracts/domain.js";
 import type { OperationContract } from "../contracts/operation.js";
 import {
@@ -58,6 +59,7 @@ export interface GenerateProposalBriefInput {
   idea_brief_status?: string;
   repository_ownership: ProposalRepositoryOwnership;
   artifact_dir?: string;
+  dry_run?: boolean;
   created_timestamp?: Date;
 }
 
@@ -92,6 +94,7 @@ export interface GenerateProposalBriefResult {
   proposal_summary: ProposalSummaryArtifact;
   proposal_draft: ProposalDraftArtifact;
   workflow: ProposalWorkflowRoute;
+  dry_run?: DryRunReport;
 }
 
 export const GENERATE_PROPOSAL_BRIEF_OPERATION_CONTRACT: OperationContract<
@@ -209,7 +212,7 @@ export async function runGenerateProposalBrief(
     content: draftContent
   };
 
-  if (input.artifact_dir) {
+  if (input.artifact_dir && !input.dry_run) {
     await writeProposalArtifacts({
       artifact_dir: input.artifact_dir,
       proposal_summary,
@@ -220,7 +223,31 @@ export async function runGenerateProposalBrief(
   return {
     proposal_summary,
     proposal_draft,
-    workflow
+    workflow,
+    ...(input.dry_run
+      ? {
+          dry_run: createDryRunReport([
+            {
+              status: "blocked",
+              kind: "gate_blocked",
+              target: workflow.required_gate,
+              detail: "Would stop for proposal_approval before any repository-facing handoff."
+            },
+            {
+              status: "planned",
+              kind: "artifact_write",
+              target: join(input.artifact_dir ?? ".", PROPOSAL_SUMMARY_FILENAME),
+              detail: "Would publish proposal_summary.md for feature-proposal review."
+            },
+            {
+              status: "planned",
+              kind: "artifact_write",
+              target: join(input.artifact_dir ?? ".", proposal_draft.path),
+              detail: `Would publish ${proposal_draft.path} for feature-proposal review.`
+            }
+          ])
+        }
+      : {})
   };
 }
 

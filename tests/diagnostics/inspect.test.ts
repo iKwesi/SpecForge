@@ -116,4 +116,46 @@ describe("runInspect success paths", () => {
     expect(deep.repo_profile.scan.max_files).toBe(1000);
     expect(deep.repo_profile.scan.truncated).toBe(false);
   });
+
+  it("reports planned artifact writes without publishing artifacts when dry_run is enabled", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "specforge-inspect-dry-run-"));
+
+    await writeRepoFiles(repoRoot, [
+      { path: "package.json", content: "{\"name\":\"demo\"}" },
+      { path: "src/api/routes.ts", content: "export const routes = [];" },
+      { path: "src/api/service.ts", content: "export const service = {};" }
+    ]);
+
+    const result = await runInspect({
+      repository_root: repoRoot,
+      dry_run: true,
+      created_timestamp: new Date("2026-03-14T00:10:00.000Z")
+    });
+
+    expect(result.dry_run).toEqual({
+      enabled: true,
+      changes: [
+        {
+          status: "planned",
+          kind: "artifact_write",
+          target: join(repoRoot, ".specforge", "repo_profile.json"),
+          detail: "Would publish repo_profile artifact metadata without mutating the repository."
+        },
+        {
+          status: "planned",
+          kind: "artifact_write",
+          target: join(repoRoot, ".specforge", "architecture_summary.json"),
+          detail: "Would publish architecture_summary artifact metadata without mutating the repository."
+        }
+      ]
+    });
+    expect((await readdir(repoRoot)).sort((left, right) => left.localeCompare(right))).toEqual([
+      "package.json",
+      "src"
+    ]);
+
+    const report = formatInspectReport(result);
+    expect(report).toContain("Dry Run: enabled");
+    expect(report).toContain("Would publish repo_profile artifact metadata");
+  });
 });

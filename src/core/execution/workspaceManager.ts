@@ -1,6 +1,7 @@
 import { lstat, mkdir, realpath } from "node:fs/promises";
 import { join } from "node:path";
 
+import { createDryRunReport, type DryRunReport } from "../contracts/dryRun.js";
 import {
   GitProviderError,
   resolveGitProvider,
@@ -43,6 +44,7 @@ export interface TaskWorkspaceManagerInput extends TaskWorkspaceTargetInput {
   preferred_provider?: GitProviderName;
   git_binary?: string;
   git_provider?: GitProvider;
+  dry_run?: boolean;
 }
 
 export interface PrepareTaskWorkspaceResult {
@@ -52,6 +54,7 @@ export interface PrepareTaskWorkspaceResult {
   created: boolean;
   selected_provider: GitProviderName;
   fallback_used: boolean;
+  dry_run?: DryRunReport;
 }
 
 export interface CleanupTaskWorkspaceResult {
@@ -61,6 +64,7 @@ export interface CleanupTaskWorkspaceResult {
   removed: boolean;
   selected_provider: GitProviderName;
   fallback_used: boolean;
+  dry_run?: DryRunReport;
 }
 
 /**
@@ -76,6 +80,31 @@ export async function prepareTaskWorkspace(
   const target = resolveTaskWorkspaceTarget(input);
   const providerResolution = await resolveWorkspaceProvider(input);
   const provider = providerResolution.provider;
+
+  if (input.dry_run) {
+    return {
+      task_id: target.task_id,
+      branch_name: target.branch_name,
+      workspace_path: target.workspace_path,
+      created: false,
+      selected_provider: providerResolution.selected_provider,
+      fallback_used: providerResolution.fallback_used,
+      dry_run: createDryRunReport([
+        {
+          status: "planned",
+          kind: "branch_create",
+          target: target.branch_name,
+          detail: "Would create or reuse the task branch for isolated execution."
+        },
+        {
+          status: "planned",
+          kind: "workspace_prepare",
+          target: target.workspace_path,
+          detail: "Would prepare an isolated task worktree without mutating the current checkout."
+        }
+      ])
+    };
+  }
 
   await mkdir(target.workspace_root, { recursive: true });
 
@@ -158,6 +187,26 @@ export async function cleanupTaskWorkspace(
   const target = resolveTaskWorkspaceTarget(input);
   const providerResolution = await resolveWorkspaceProvider(input);
   const provider = providerResolution.provider;
+
+  if (input.dry_run) {
+    return {
+      task_id: target.task_id,
+      branch_name: target.branch_name,
+      workspace_path: target.workspace_path,
+      removed: false,
+      selected_provider: providerResolution.selected_provider,
+      fallback_used: providerResolution.fallback_used,
+      dry_run: createDryRunReport([
+        {
+          status: "planned",
+          kind: "workspace_remove",
+          target: target.workspace_path,
+          detail: "Would remove the isolated task worktree without mutating the active checkout."
+        }
+      ])
+    };
+  }
+
   const worktrees = await provider.listWorktrees({ repo_root: input.repo_root });
   const normalizedWorkspacePath = await normalizePathIfExists(target.workspace_path);
   const existingWorkspace = findWorktreeByPath(worktrees, normalizedWorkspacePath);
