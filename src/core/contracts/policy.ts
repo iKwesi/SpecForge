@@ -174,6 +174,15 @@ function validateEnabledGates(
   }
 
   const enabledByDefault = candidate as Record<string, unknown>;
+  for (const gate of Object.keys(enabledByDefault)) {
+    if (!isKnownGate(gate)) {
+      issues.push({
+        path: `gates.enabled_by_default.${gate}`,
+        message: "must use a known artifact gate key."
+      });
+    }
+  }
+
   for (const gate of ARTIFACT_GATES) {
     if (typeof enabledByDefault[gate] !== "boolean") {
       issues.push({
@@ -189,6 +198,10 @@ function validateApplicableProjectModes(
   issues: PolicyValidationIssue[]
 ): void {
   if (candidate === undefined) {
+    issues.push({
+      path: "gates.applicable_project_modes",
+      message: "must be an object keyed by gate name to arrays of supported project modes."
+    });
     return;
   }
 

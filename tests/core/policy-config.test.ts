@@ -91,4 +91,44 @@ describe("policy config defaults", () => {
       ])
     );
   });
+
+  it("rejects missing gates.applicable_project_modes because the contract requires it", () => {
+    const result = validatePolicyConfig({
+      ...createDefaultPolicyConfig(),
+      gates: {
+        enabled_by_default: createDefaultPolicyConfig().gates.enabled_by_default
+      }
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "gates.applicable_project_modes"
+        })
+      ])
+    );
+  });
+
+  it("rejects unknown enabled gate keys instead of silently accepting typos", () => {
+    const result = validatePolicyConfig({
+      ...createDefaultPolicyConfig(),
+      gates: {
+        ...createDefaultPolicyConfig().gates,
+        enabled_by_default: {
+          ...createDefaultPolicyConfig().gates.enabled_by_default,
+          merge_aproval: true
+        }
+      }
+    });
+
+    expect(result.valid).toBe(false);
+    expect(result.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          path: "gates.enabled_by_default.merge_aproval"
+        })
+      ])
+    );
+  });
 });
