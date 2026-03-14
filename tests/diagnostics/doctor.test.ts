@@ -103,7 +103,7 @@ describe("runDoctor failure paths", () => {
     );
     expect(
       result.checks.find((check) => check.id === "policy_config")?.message
-    ).toMatch(/coverage\.scope .*; .*coverage\.enforcement .*; .*parallelism\.max_concurrent_tasks .*additional issue not shown/);
+    ).toMatch(/coverage\.scope .*; .*coverage\.enforcement .*; .*parallelism\.max_concurrent_tasks .*; \.\.\.and 1 more/);
   });
 });
 

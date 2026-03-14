@@ -34,6 +34,21 @@ export interface PolicyValidationResult {
   issues: PolicyValidationIssue[];
 }
 
+export function formatPolicyValidationIssues(issues: PolicyValidationIssue[]): string {
+  const maxIssuesToShow = 3;
+  const displayedIssues = issues
+    .slice(0, maxIssuesToShow)
+    .map((issue) => `${issue.path} ${issue.message}`);
+  const remainingCount = issues.length - displayedIssues.length;
+  const baseMessage = displayedIssues.join("; ");
+
+  if (remainingCount > 0) {
+    return `${baseMessage}; ...and ${remainingCount} more`;
+  }
+
+  return baseMessage;
+}
+
 const DEFAULT_ENABLED_GATES: Record<ArtifactGate, boolean> = {
   proposal_approval: true,
   spec_approval: true,
@@ -184,7 +199,16 @@ function validateEnabledGates(
   }
 
   for (const gate of ARTIFACT_GATES) {
-    if (typeof enabledByDefault[gate] !== "boolean") {
+    const value = enabledByDefault[gate];
+    if (value === undefined) {
+      issues.push({
+        path: `gates.enabled_by_default.${gate}`,
+        message: "is required and must be a boolean."
+      });
+      continue;
+    }
+
+    if (typeof value !== "boolean") {
       issues.push({
         path: `gates.enabled_by_default.${gate}`,
         message: "must be a boolean."

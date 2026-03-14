@@ -136,4 +136,24 @@ describe("policy config defaults", () => {
       ])
     );
   });
+
+  it("distinguishes missing required enabled gate keys from wrong-type values", () => {
+    const config = createDefaultPolicyConfig();
+    const { merge_approval, ...enabledByDefault } = config.gates.enabled_by_default;
+
+    expect(merge_approval).toBe(true);
+
+    const result = validatePolicyConfig({
+      ...config,
+      gates: {
+        ...config.gates,
+        enabled_by_default: enabledByDefault
+      }
+    });
+
+    expect(result.valid).toBe(false);
+    expect(
+      result.issues.find((issue) => issue.path === "gates.enabled_by_default.merge_approval")?.message
+    ).toBe("is required and must be a boolean.");
+  });
 });

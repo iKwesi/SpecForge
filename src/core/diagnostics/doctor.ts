@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 
 import {
   createDefaultPolicyConfig,
+  formatPolicyValidationIssues,
   validatePolicyConfig,
   type SpecForgePolicyConfig
 } from "../contracts/policy.js";
@@ -230,23 +231,6 @@ function checkPolicyConfig(policy: SpecForgePolicyConfig): DoctorCheck {
     status: "pass",
     message: "Policy configuration is valid for the current v1 contract."
   };
-}
-
-function formatPolicyValidationIssues(
-  issues: Array<{ path: string; message: string }>
-): string {
-  const maxIssuesToShow = 3;
-  const displayedIssues = issues
-    .slice(0, maxIssuesToShow)
-    .map((issue) => `${issue.path} ${issue.message}`);
-  const remainingCount = issues.length - displayedIssues.length;
-  const baseMessage = displayedIssues.join("; ");
-
-  if (remainingCount > 0) {
-    return `${baseMessage}; ${remainingCount} additional issue${remainingCount === 1 ? "" : "s"} not shown.`;
-  }
-
-  return baseMessage;
 }
 
 async function defaultCommandRunner(

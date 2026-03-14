@@ -49,4 +49,4 @@ When a policy file is invalid, SpecForge rejects it with path-specific errors su
 
 - `coverage.enforcement must be "report-only" or "hard-block".`
 - `parallelism.max_concurrent_tasks must be a positive integer.`
-- `gates.applicable_project_modes.spec_approval[1] must be one of greenfield, existing-repo, contribution, or feature-proposal.`
+- `gates.applicable_project_modes.spec_approval[1] must be one of greenfield, existing-repo, contribution, feature-proposal.`
