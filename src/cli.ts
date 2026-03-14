@@ -183,12 +183,14 @@ The command reads artifact inputs and optional policy/schedule context, then pri
       "Parent/output directory under which the .specforge artifact directory will be created"
     )
     .option("--deep", "Increase the bounded scan budget for deeper repository inspection")
+    .option("--dry-run", "Report planned artifact writes without publishing them")
     .addHelpText(
       "after",
       `
 Examples:
   $ specforge inspect
   $ specforge inspect --repository-root ../my-repo --artifact-dir ../my-repo --deep
+  $ specforge inspect --repository-root . --dry-run
 
 What it produces:
   - a repository profile artifact
@@ -198,12 +200,18 @@ Use this before planning or task decomposition when you need a bounded view of a
 `
     )
     .action(
-      async (options: { repositoryRoot?: string; artifactDir?: string; deep?: boolean }) => {
+      async (options: {
+        repositoryRoot?: string;
+        artifactDir?: string;
+        deep?: boolean;
+        dryRun?: boolean;
+      }) => {
         try {
           const result = await inspectRunner({
             repository_root: options.repositoryRoot ?? process.cwd(),
             ...(options.artifactDir ? { artifact_dir: options.artifactDir } : {}),
             ...(options.deep ? { deep: true } : {}),
+            ...(options.dryRun ? { dry_run: true } : {}),
             ...(inspectInput ?? {})
           });
 

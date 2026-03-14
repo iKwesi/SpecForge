@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { runCli } from "../../src/cli.js";
 import type { InspectResult } from "../../src/core/diagnostics/inspect.js";
+import type { DryRunReport } from "../../src/core/contracts/dryRun.js";
 
 function buildInspectResult(overrides: Partial<InspectResult> = {}): InspectResult {
   return {
@@ -100,5 +101,39 @@ describe("sf inspect command", () => {
 
     expect(exitCode).toBe(1);
     expect(stderr).toContain("inspect failed");
+  });
+
+  it("passes --dry-run through to inspect and prints planned side effects", async () => {
+    let stdout = "";
+    let receivedDryRun = false;
+    const dryRun: DryRunReport = {
+      enabled: true,
+      changes: [
+        {
+          status: "planned",
+          kind: "artifact_write",
+          target: "/workspace/specforge/.specforge/repo_profile.json",
+          detail: "Would publish repo_profile artifact metadata without mutating the repository."
+        }
+      ]
+    };
+
+    const exitCode = await runCli(["node", "sf", "inspect", "--dry-run"], {
+      stdout: {
+        write(chunk: string) {
+          stdout += chunk;
+          return true;
+        }
+      },
+      inspect_runner: async (input) => {
+        receivedDryRun = input?.dry_run === true;
+        return buildInspectResult({ dry_run: dryRun });
+      }
+    });
+
+    expect(exitCode).toBe(0);
+    expect(receivedDryRun).toBe(true);
+    expect(stdout).toContain("Dry Run: enabled");
+    expect(stdout).toContain("Would publish repo_profile artifact metadata");
   });
 });

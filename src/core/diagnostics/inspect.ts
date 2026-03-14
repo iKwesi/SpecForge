@@ -1,16 +1,19 @@
 import { join } from "node:path";
 
+import { mergeDryRunReports, type DryRunReport } from "../contracts/dryRun.js";
 import type { ArchitectureSummaryArtifact } from "../operations/mapArchitectureFromRepo.js";
 import {
   MapArchitectureFromRepoError,
   runMapArchitectureFromRepo,
-  type MapArchitectureFromRepoInput
+  type MapArchitectureFromRepoInput,
+  type MapArchitectureFromRepoResult
 } from "../operations/mapArchitectureFromRepo.js";
 import type { RepoProfileArtifact } from "../operations/profileRepository.js";
 import {
   ProfileRepositoryError,
   runProfileRepository,
-  type ProfileRepositoryInput
+  type ProfileRepositoryInput,
+  type ProfileRepositoryResult
 } from "../operations/profileRepository.js";
 
 const STANDARD_MAX_FILES = 200;
@@ -38,17 +41,17 @@ export interface InspectResult {
   architecture_summary_path: string;
   repo_profile: RepoProfileArtifact;
   architecture_summary: ArchitectureSummaryArtifact;
+  dry_run?: DryRunReport;
 }
 
 export interface RunInspectInput {
   repository_root?: string;
   artifact_dir?: string;
   deep?: boolean;
+  dry_run?: boolean;
   created_timestamp?: Date;
-  profile_runner?: (input: ProfileRepositoryInput) => Promise<{ repo_profile: RepoProfileArtifact }>;
-  architecture_runner?: (
-    input: MapArchitectureFromRepoInput
-  ) => Promise<{ architecture_summary: ArchitectureSummaryArtifact }>;
+  profile_runner?: (input: ProfileRepositoryInput) => Promise<ProfileRepositoryResult>;
+  architecture_runner?: (input: MapArchitectureFromRepoInput) => Promise<MapArchitectureFromRepoResult>;
 }
 
 /**
@@ -66,6 +69,7 @@ export async function runInspect(input: RunInspectInput = {}): Promise<InspectRe
   const maxFiles = scanMode === "deep" ? DEEP_MAX_FILES : STANDARD_MAX_FILES;
   const profileRunner = input.profile_runner ?? runProfileRepository;
   const architectureRunner = input.architecture_runner ?? runMapArchitectureFromRepo;
+  let dryRun: DryRunReport | undefined;
 
   let repoProfile: RepoProfileArtifact;
   try {
@@ -74,9 +78,11 @@ export async function runInspect(input: RunInspectInput = {}): Promise<InspectRe
       repository_root: repositoryRoot,
       ...(profileArtifactDir ? { artifact_dir: profileArtifactDir } : {}),
       max_files: maxFiles,
+      ...(input.dry_run ? { dry_run: true } : {}),
       ...(input.created_timestamp ? { created_timestamp: input.created_timestamp } : {})
     });
     repoProfile = result.repo_profile;
+    dryRun = mergeDryRunReports(dryRun, "dry_run" in result ? result.dry_run : undefined);
   } catch (error) {
     if (error instanceof ProfileRepositoryError) {
       throw new InspectError(
@@ -95,9 +101,11 @@ export async function runInspect(input: RunInspectInput = {}): Promise<InspectRe
       project_mode: "existing-repo",
       repo_profile: repoProfile,
       artifact_dir: artifactRoot,
+      ...(input.dry_run ? { dry_run: true } : {}),
       ...(input.created_timestamp ? { created_timestamp: input.created_timestamp } : {})
     });
     architectureSummary = result.architecture_summary;
+    dryRun = mergeDryRunReports(dryRun, "dry_run" in result ? result.dry_run : undefined);
   } catch (error) {
     if (error instanceof MapArchitectureFromRepoError) {
       throw new InspectError(
@@ -116,7 +124,8 @@ export async function runInspect(input: RunInspectInput = {}): Promise<InspectRe
     repo_profile_path: join(artifactRoot, ".specforge", "repo_profile.json"),
     architecture_summary_path: join(artifactRoot, ".specforge", "architecture_summary.json"),
     repo_profile: repoProfile,
-    architecture_summary: architectureSummary
+    architecture_summary: architectureSummary,
+    ...(dryRun ? { dry_run: dryRun } : {})
   };
 }
 
@@ -129,7 +138,18 @@ export function formatInspectReport(result: InspectResult): string {
     `Repo Profile: ${result.repo_profile.metadata.artifact_id}@${result.repo_profile.metadata.artifact_version}`,
     `Architecture Summary: ${result.architecture_summary.metadata.artifact_id}@${result.architecture_summary.metadata.artifact_version}`,
     `Repo Profile Path: ${result.repo_profile_path}`,
-    `Architecture Summary Path: ${result.architecture_summary_path}`,
+    `Architecture Summary Path: ${result.architecture_summary_path}`
+  ];
+
+  if (result.dry_run) {
+    lines.push("", "Dry Run: enabled");
+    for (const change of result.dry_run.changes) {
+      lines.push(`- ${change.status} ${change.kind}: ${change.target}`);
+      lines.push(`  ${change.detail}`);
+    }
+  }
+
+  lines.push(
     "",
     "Repo Profile Evidence",
     `- scanned_file_count: ${result.repo_profile.scan.scanned_file_count}`,
@@ -138,7 +158,7 @@ export function formatInspectReport(result: InspectResult): string {
     `- detected_tooling: ${result.repo_profile.evidence.detected_tooling.join(", ") || "none"}`,
     "",
     "Architecture Subsystems"
-  ];
+  );
 
   for (const subsystem of result.architecture_summary.subsystems) {
     lines.push(

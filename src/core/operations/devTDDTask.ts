@@ -6,6 +6,7 @@ import {
   createInitialArtifactMetadata,
   createNextArtifactMetadata
 } from "../artifacts/versioning.js";
+import { createDryRunReport, type DryRunReport } from "../contracts/dryRun.js";
 import type { ProjectMode } from "../contracts/domain.js";
 import type { OperationContract } from "../contracts/operation.js";
 import type { ContextPackArtifact } from "./buildContextPack.js";
@@ -50,6 +51,7 @@ export interface DevTddTaskInput {
   branch_ref?: string;
   pr_ref?: string;
   artifact_dir?: string;
+  dry_run?: boolean;
   created_timestamp?: Date;
 }
 
@@ -77,6 +79,7 @@ export interface TaskExecutionResultArtifact {
 
 export interface DevTddTaskResult {
   task_execution_result: TaskExecutionResultArtifact;
+  dry_run?: DryRunReport;
 }
 
 export const DEV_TDD_TASK_OPERATION_CONTRACT: OperationContract<
@@ -177,7 +180,7 @@ export async function runDevTddTask(input: DevTddTaskInput): Promise<DevTddTaskR
     summary_markdown: summaryMarkdown
   };
 
-  if (artifactDir) {
+  if (artifactDir && !input.dry_run) {
     await writeTaskExecutionResultArtifact({
       artifact_dir: artifactDir,
       task_id: contextPack.task.id,
@@ -186,7 +189,19 @@ export async function runDevTddTask(input: DevTddTaskInput): Promise<DevTddTaskR
   }
 
   return {
-    task_execution_result: taskExecutionResult
+    task_execution_result: taskExecutionResult,
+    ...(input.dry_run
+      ? {
+          dry_run: createDryRunReport([
+            {
+              status: "planned",
+              kind: "task_execution",
+              target: contextPack.task.id,
+              detail: `Would publish ${join(artifactDir ?? ".", TASK_RESULTS_DIR, `${contextPack.task.id}.json`)} after a valid RED/GREEN/REFACTOR transcript.`
+            }
+          ])
+        }
+      : {})
   };
 }
 
