@@ -67,6 +67,44 @@ describe("runDoctor failure paths", () => {
       })
     ]);
   });
+
+  it("reports actionable policy validation errors when the config shape is invalid", async () => {
+    const result = await runDoctor({
+      cwd: "/workspace/specforge",
+      node_version: "v22.3.0",
+      command_runner: createRunner({
+        "git --version": { stdout: "git version 2.47.0\n" },
+        "pnpm --version": { stdout: "10.31.0\n" },
+        "git rev-parse --show-toplevel": { stdout: "/workspace/specforge\n" }
+      }),
+      policy: {
+        ...createDefaultPolicyConfig(),
+        coverage: {
+          scope: "full-repo",
+          enforcement: "warn-only"
+        },
+        parallelism: {
+          max_concurrent_tasks: 0,
+          serialize_on_uncertainty: "yes"
+        }
+      } as unknown as ReturnType<typeof createDefaultPolicyConfig>
+    });
+
+    expect(result.overall_status).toBe("fail");
+    expect(result.checks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "policy_config",
+          status: "fail",
+          message: expect.stringContaining("coverage.scope"),
+          remediation: expect.stringContaining("docs/POLICY_CONFIG.md")
+        })
+      ])
+    );
+    expect(
+      result.checks.find((check) => check.id === "policy_config")?.message
+    ).toMatch(/coverage\.scope .*; .*coverage\.enforcement .*; .*parallelism\.max_concurrent_tasks .*; \.\.\.and 1 more/);
+  });
 });
 
 describe("runDoctor success paths", () => {

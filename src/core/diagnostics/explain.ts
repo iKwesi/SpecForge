@@ -1,7 +1,11 @@
 import { readFile } from "node:fs/promises";
 
 import { ARTIFACT_GATES } from "../contracts/domain.js";
-import type { SpecForgePolicyConfig } from "../contracts/policy.js";
+import {
+  formatPolicyValidationIssues,
+  validatePolicyConfig,
+  type SpecForgePolicyConfig
+} from "../contracts/policy.js";
 import type { ConservativeSchedule, ConservativeScheduleBatch } from "../execution/scheduler.js";
 
 export type ExplainErrorCode =
@@ -196,17 +200,23 @@ async function readArtifactEvidence(path: string): Promise<ExplainArtifactEviden
 
 async function readPolicyEvidence(path: string): Promise<ExplainPolicyEvidence> {
   const value = await readJsonFile(path, "policy_read_failed");
-  if (!isPolicyConfig(value)) {
-    throw new ExplainError("invalid_policy", `Invalid policy file: ${path}`);
+  const validation = validatePolicyConfig(value);
+  if (!validation.valid) {
+    throw new ExplainError(
+      "invalid_policy",
+      `Invalid policy file: ${path}. ${formatPolicyValidationIssues(validation.issues)}`,
+      validation.issues
+    );
   }
+  const policy = value as SpecForgePolicyConfig;
 
-  const enabledGates = ARTIFACT_GATES.filter((gate) => value.gates.enabled_by_default[gate] === true);
-  const disabledGates = ARTIFACT_GATES.filter((gate) => value.gates.enabled_by_default[gate] === false);
+  const enabledGates = ARTIFACT_GATES.filter((gate) => policy.gates.enabled_by_default[gate] === true);
+  const disabledGates = ARTIFACT_GATES.filter((gate) => policy.gates.enabled_by_default[gate] === false);
 
   return {
     source: path,
-    coverage: value.coverage,
-    parallelism: value.parallelism,
+    coverage: policy.coverage,
+    parallelism: policy.parallelism,
     enabled_gates: enabledGates,
     disabled_gates: disabledGates
   };
@@ -301,25 +311,6 @@ function asArtifactEvidenceInput(
       }>
     }
   };
-}
-
-function isPolicyConfig(value: unknown): value is SpecForgePolicyConfig {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const candidate = value as Partial<SpecForgePolicyConfig>;
-  return (
-    !!candidate.coverage &&
-    !!candidate.parallelism &&
-    !!candidate.gates &&
-    typeof candidate.coverage.scope === "string" &&
-    typeof candidate.coverage.enforcement === "string" &&
-    typeof candidate.parallelism.max_concurrent_tasks === "number" &&
-    typeof candidate.parallelism.serialize_on_uncertainty === "boolean" &&
-    !!candidate.gates.enabled_by_default &&
-    typeof candidate.gates.enabled_by_default === "object"
-  );
 }
 
 function isConservativeSchedule(value: unknown): value is ConservativeSchedule {

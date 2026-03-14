@@ -86,6 +86,40 @@ describe("runExplain failure paths", () => {
       })
     );
   });
+
+  it("fails with actionable validation details when a policy file is invalid", async () => {
+    const tempDir = await mkdtemp(join(tmpdir(), "specforge-explain-"));
+    const artifactFile = await writeJsonFile(tempDir, "task_execution_result.json", buildArtifact());
+    const policyFile = await writeJsonFile(tempDir, "policy.json", {
+      coverage: {
+        scope: "full-repo",
+        enforcement: "warn-only"
+      },
+      parallelism: {
+        max_concurrent_tasks: 0,
+        serialize_on_uncertainty: "yes"
+      },
+      gates: createDefaultPolicyConfig().gates
+    });
+
+    await expect(
+      runExplain({
+        artifact_files: [artifactFile],
+        policy_file: policyFile
+      })
+    ).rejects.toThrow(/coverage\.scope .*; .*coverage\.enforcement .*; .*parallelism\.max_concurrent_tasks .*; \.\.\.and 1 more/);
+
+    await expect(
+      runExplain({
+        artifact_files: [artifactFile],
+        policy_file: policyFile
+      })
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<ExplainError>>({
+        code: "invalid_policy"
+      })
+    );
+  });
 });
 
 describe("runExplain success paths", () => {
