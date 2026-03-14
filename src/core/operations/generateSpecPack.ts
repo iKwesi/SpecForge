@@ -151,8 +151,11 @@ export async function runGenerateSpecPack(
   const previousVersion = await readExistingSpecVersion(input.artifact_dir);
   const specMarkdownContent = renderSpecMarkdown(sections);
 
-  const specMetadata = createSpecMetadata({
-    artifact_id: "spec.md",
+  // The in-memory spec contract and the markdown file are separate artifacts.
+  // They share section content, but downstream planners expect the contract
+  // artifact to retain the stable "spec.main" identifier.
+  const specContractMetadata = createSpecMetadata({
+    artifact_id: "spec.main",
     content: specMarkdownContent,
     source_refs: sourceRefs,
     ...(previousVersion ? { previous_version: previousVersion } : {}),
@@ -161,7 +164,7 @@ export async function runGenerateSpecPack(
 
   const spec_artifact = {
     kind: "spec" as const,
-    metadata: specMetadata,
+    metadata: specContractMetadata,
     sections,
     source_refs: sourceRefs
   };
@@ -238,7 +241,13 @@ export async function runGenerateSpecPack(
 
   const spec_md: SpecMarkdownArtifact = {
     kind: "spec_markdown",
-    metadata: specMetadata,
+    metadata: createSpecMetadata({
+      artifact_id: "spec.md",
+      content: specMarkdownContent,
+      source_refs: sourceRefs,
+      ...(previousVersion ? { previous_version: previousVersion } : {}),
+      ...(input.created_timestamp ? { created_timestamp: input.created_timestamp } : {})
+    }),
     source_refs: sourceRefs,
     project_mode: input.project_mode,
     sections,
@@ -416,7 +425,87 @@ function renderSchemaContent(prd: PrdJsonArtifact): string {
 }
 
 function renderAcceptanceContent(acceptanceCriteriaSection: string): string {
-  return ["# Acceptance Criteria", "", acceptanceCriteriaSection].join("\n");
+  // Downstream planners and context packs rely on stable AC-* identifiers.
+  // We normalize the acceptance section into canonical bullets here so the
+  // generated acceptance artifact stays machine-addressable across operations.
+  const criteria = collectAcceptanceCriteria(acceptanceCriteriaSection);
+  const bulletLines = (criteria.length > 0 ? criteria : ["Satisfy acceptance criteria."]).map(
+    (criterion, index) => `- AC-${index + 1}: ${criterion}`
+  );
+
+  return ["# Acceptance Criteria", "", ...bulletLines].join("\n");
+}
+
+function collectAcceptanceCriteria(section: string): string[] {
+  const criteria: string[] = [];
+  let currentCriterion = "";
+
+  for (const rawLine of section.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (line.length === 0) {
+      flushCriterion(criteria, currentCriterion);
+      currentCriterion = "";
+      continue;
+    }
+
+    if (line.startsWith("#")) {
+      continue;
+    }
+
+    if (startsNewCriterion(line) && currentCriterion.length > 0) {
+      flushCriterion(criteria, currentCriterion);
+      currentCriterion = "";
+    }
+
+    currentCriterion = currentCriterion.length === 0 ? line : `${currentCriterion} ${line}`;
+  }
+
+  flushCriterion(criteria, currentCriterion);
+  return criteria;
+}
+
+function flushCriterion(criteria: string[], value: string): void {
+  const normalized = normalizeAcceptanceCriterion(value);
+  if (normalized.length > 0) {
+    criteria.push(normalized);
+  }
+}
+
+function startsNewCriterion(line: string): boolean {
+  return /^(?:[-*+]|[0-9]+[.)])\s+/.test(line) || /^AC-\d+:\s*/i.test(line);
+}
+
+function normalizeAcceptanceCriterion(value: string): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length === 0) {
+    return "";
+  }
+
+  const labeledMatch = normalized.match(/^(Evaluation:|Quality Bar:)\s*(.*)$/i);
+  if (labeledMatch) {
+    const label = labeledMatch[1] ?? "";
+    const rest = labeledMatch[2] ?? "";
+    const normalizedRest = stripRepeatedSectionLabel(stripAcceptanceDecorators(rest), label);
+    return normalizedRest.length > 0 ? `${label} ${normalizedRest}` : label;
+  }
+
+  return stripAcceptanceDecorators(normalized);
+}
+
+function stripAcceptanceDecorators(value: string): string {
+  return value
+    .replace(/^(?:[-*+]|[0-9]+[.)])\s+/, "")
+    .replace(/^AC-\d+:\s*/i, "")
+    .trim();
+}
+
+function stripRepeatedSectionLabel(value: string, label: string): string {
+  const labelPattern = new RegExp(`^${escapeRegExp(label)}\\s*`, "i");
+  return value.replace(labelPattern, "").trim();
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function renderDecisionsContent(decisionsSection: string): string {
@@ -441,6 +530,7 @@ function renderInitialDag(): string {
 
 interface CreateSpecMetadataInput {
   artifact_id:
+    | "spec.main"
     | "spec.md"
     | "schema.core"
     | "acceptance.core"
@@ -564,4 +654,3 @@ async function writeSpecPackArtifacts(input: WriteSpecPackArtifactsInput): Promi
 function normalizeText(value?: string): string {
   return (value ?? "").trim();
 }
-

@@ -337,7 +337,7 @@ function extractAcceptanceExcerpt(content: string, acceptanceRef: string): strin
     return undefined;
   }
 
-  return line.slice(2).trim();
+  return line.slice(marker.length).trim();
 }
 
 function summarizeSchemaContent(content: string): string {

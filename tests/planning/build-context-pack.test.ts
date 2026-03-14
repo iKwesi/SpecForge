@@ -223,7 +223,8 @@ describe("buildContextPack success paths", () => {
           artifact_id: "acceptance.core",
           artifact_version: "v2"
         },
-        locator: "AC-1"
+        locator: "AC-1",
+        excerpt: "verify minimal context pack output"
       })
     );
 
