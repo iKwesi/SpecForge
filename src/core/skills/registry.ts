@@ -10,6 +10,7 @@ export type SkillRegistryErrorCode =
   | "invalid_provider"
   | "duplicate_provider"
   | "invalid_skill"
+  | "invalid_filters"
   | "duplicate_skill"
   | "provider_not_found";
 
@@ -146,9 +147,10 @@ export function createSkillRegistry(input: CreateSkillRegistryInput = {}): Skill
     },
 
     listSkills(filters = {}) {
+      const normalizedFilters = normalizeListSkillsInput(filters);
       return [...skills.values()]
         .map((skill) => materializeRegisteredSkill(skill, providers))
-        .filter((skill) => matchesSkillFilters(skill, filters))
+        .filter((skill) => matchesSkillFilters(skill, normalizedFilters))
         .sort((left, right) => left.skill_id.localeCompare(right.skill_id));
     }
   };
@@ -340,7 +342,7 @@ function materializeRegisteredSkill(
 }
 
 function matchesSkillFilters(skill: RegisteredSkill, filters: ListSkillsInput): boolean {
-  if (filters.provider_id && skill.provider_id !== filters.provider_id.trim()) {
+  if (filters.provider_id && skill.provider_id !== filters.provider_id) {
     return false;
   }
 
@@ -348,13 +350,16 @@ function matchesSkillFilters(skill: RegisteredSkill, filters: ListSkillsInput): 
     return false;
   }
 
-  if (filters.supported_domain && !skill.capability_contract.supported_domains.includes(filters.supported_domain.trim())) {
+  if (
+    filters.supported_domain &&
+    !skill.capability_contract.supported_domains.includes(filters.supported_domain)
+  ) {
     return false;
   }
 
   if (
     filters.supported_task_type &&
-    !skill.capability_contract.supported_task_types.includes(filters.supported_task_type.trim())
+    !skill.capability_contract.supported_task_types.includes(filters.supported_task_type)
   ) {
     return false;
   }
@@ -367,6 +372,64 @@ function matchesSkillFilters(skill: RegisteredSkill, filters: ListSkillsInput): 
   }
 
   return true;
+}
+
+function normalizeListSkillsInput(filters: ListSkillsInput): ListSkillsInput {
+  if (!isPlainRecord(filters)) {
+    throw new SkillRegistryError(
+      "invalid_filters",
+      "listSkills filters must be a non-null object."
+    );
+  }
+
+  return {
+    ...(filters.provider_id !== undefined
+      ? {
+          provider_id: normalizeNonEmptyString(
+            filters.provider_id,
+            "provider_id",
+            "invalid_filters"
+          )
+        }
+      : {}),
+    ...(filters.source_type !== undefined
+      ? {
+          source_type: normalizeEnumValue(
+            filters.source_type,
+            SKILL_PROVIDER_SOURCE_TYPES,
+            "source_type",
+            "invalid_filters"
+          )
+        }
+      : {}),
+    ...(filters.supported_domain !== undefined
+      ? {
+          supported_domain: normalizeNonEmptyString(
+            filters.supported_domain,
+            "supported_domain",
+            "invalid_filters"
+          )
+        }
+      : {}),
+    ...(filters.supported_task_type !== undefined
+      ? {
+          supported_task_type: normalizeNonEmptyString(
+            filters.supported_task_type,
+            "supported_task_type",
+            "invalid_filters"
+          )
+        }
+      : {}),
+    ...(filters.requires_approval !== undefined
+      ? {
+          requires_approval: normalizeBoolean(
+            filters.requires_approval,
+            "requires_approval",
+            "invalid_filters"
+          )
+        }
+      : {})
+  };
 }
 
 function normalizeOptionalStringFields<T extends object, K extends keyof T & string>(

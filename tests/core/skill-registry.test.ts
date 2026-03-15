@@ -203,6 +203,22 @@ describe("skill registry", () => {
         skill_id: "builtin.idea-triage"
       })
     ]);
+
+    expect(() => registry.listSkills(null as never)).toThrowError(
+      expect.objectContaining<Partial<SkillRegistryError>>({
+        code: "invalid_filters"
+      })
+    );
+
+    expect(() =>
+      registry.listSkills({
+        supported_domain: 123 as never
+      })
+    ).toThrowError(
+      expect.objectContaining<Partial<SkillRegistryError>>({
+        code: "invalid_filters"
+      })
+    );
   });
 
   it("fails with typed errors when providers or skills are invalid or duplicated", () => {
