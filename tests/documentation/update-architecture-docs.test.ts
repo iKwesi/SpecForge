@@ -224,6 +224,36 @@ describe("updateArchitectureDocs success paths", () => {
     expect(result.architecture_docs_content).toContain("<!-- specforge:begin generated-architecture -->");
   });
 
+  it("is idempotent when rerun against an already-generated architecture docs file", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "specforge-architecture-docs-"));
+    const docsDir = join(repoRoot, "docs");
+    await mkdir(docsDir, { recursive: true });
+    await writeFile(
+      join(docsDir, "ARCHITECTURE.md"),
+      "# SpecForge Architecture\n\nManual overview.\n",
+      "utf8"
+    );
+
+    const first = await runUpdateArchitectureDocs({
+      project_mode: "existing-repo",
+      repository_root: repoRoot,
+      repo_profile: buildRepoProfile(repoRoot),
+      architecture_summary: buildArchitectureSummary(repoRoot)
+    });
+    const firstContent = await readFile(first.architecture_docs_path, "utf8");
+
+    const second = await runUpdateArchitectureDocs({
+      project_mode: "existing-repo",
+      repository_root: repoRoot,
+      repo_profile: buildRepoProfile(repoRoot),
+      architecture_summary: buildArchitectureSummary(repoRoot)
+    });
+    const secondContent = await readFile(second.architecture_docs_path, "utf8");
+
+    expect(secondContent).toBe(firstContent);
+    expect(second.architecture_docs_content).toBe(first.architecture_docs_content);
+  });
+
   it("supports dry-run mode without mutating the repository", async () => {
     const repoRoot = await mkdtemp(join(tmpdir(), "specforge-architecture-docs-dry-run-"));
 

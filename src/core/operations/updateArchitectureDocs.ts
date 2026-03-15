@@ -401,7 +401,7 @@ async function writeArchitectureSummaryMarkdown(path: string, markdown: string):
 async function writeArchitectureDocs(path: string, markdown: string): Promise<void> {
   try {
     await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, `${markdown}\n`, "utf8");
+    await writeFile(path, markdown, "utf8");
   } catch (error) {
     throw new UpdateArchitectureDocsError(
       "docs_write_failed",
