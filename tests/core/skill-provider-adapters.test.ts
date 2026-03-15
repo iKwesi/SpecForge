@@ -39,7 +39,7 @@ describe("external skill pack provider adapters", () => {
     ]);
   });
 
-  it("keeps external pack metadata compatible with registry trust/provider concepts and selection policy", async () => {
+  it("keeps external pack metadata compatible with registry trust/provider concepts and selection policy", () => {
     const registry = createBootstrappedSkillRegistry();
 
     registerExternalSkillPack(registry, createPrototypePostgresSkillPack());
@@ -87,8 +87,71 @@ describe("external skill pack provider adapters", () => {
     ).rejects.toEqual(
       expect.objectContaining<Partial<ExternalSkillPackAdapterError>>({
         code: "invalid_adapter",
-        message: "adapter.load() failed.",
-        details: rootCause
+        message: 'adapter.load() failed for adapter_id "prototype.failing-pack".',
+        details: {
+          adapter_id: "prototype.failing-pack",
+          cause: rootCause
+        }
+      })
+    );
+  });
+
+  it("rejects external packs that reuse a skill_id within the same pack", async () => {
+    await expect(
+      loadExternalSkillPack({
+        adapter_id: "prototype.duplicate-skill-pack",
+        async load() {
+          return {
+            pack_id: "prototype.duplicate-skill-pack",
+            provider: {
+              provider_id: "pack.duplicate",
+              display_name: "Duplicate Skill Pack",
+              source_type: "external"
+            },
+            skills: [
+              {
+                skill_id: "pack.duplicate.analysis",
+                display_name: "Duplicate Analysis",
+                version: "0.1.0",
+                provider_id: "pack.duplicate",
+                capability_contract: {
+                  supported_domains: ["planning"],
+                  supported_task_types: ["analysis"],
+                  input_contract: "specforge.context_pack.v1",
+                  output_contract: "specforge.skill_result.v1"
+                },
+                trust: {
+                  trust_level: "verified",
+                  verification_status: "verified",
+                  requires_approval: false
+                }
+              },
+              {
+                skill_id: "pack.duplicate.analysis",
+                display_name: "Duplicate Analysis Copy",
+                version: "0.1.0",
+                provider_id: "pack.duplicate",
+                capability_contract: {
+                  supported_domains: ["planning"],
+                  supported_task_types: ["review"],
+                  input_contract: "specforge.context_pack.v1",
+                  output_contract: "specforge.skill_result.v1"
+                },
+                trust: {
+                  trust_level: "verified",
+                  verification_status: "verified",
+                  requires_approval: false
+                }
+              }
+            ]
+          };
+        }
+      })
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<ExternalSkillPackAdapterError>>({
+        code: "invalid_skill_pack",
+        message:
+          'duplicate skill_id "pack.duplicate.analysis" in external skill pack "prototype.duplicate-skill-pack".'
       })
     );
   });

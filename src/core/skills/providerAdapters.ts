@@ -67,8 +67,11 @@ export async function loadExternalSkillPack(
 
     throw new ExternalSkillPackAdapterError(
       "invalid_adapter",
-      "adapter.load() failed.",
-      error
+      `adapter.load() failed for adapter_id "${adapter.adapter_id}".`,
+      {
+        adapter_id: adapter.adapter_id,
+        cause: error
+      }
     );
   }
 }
@@ -199,7 +202,20 @@ function validateExternalSkillPack(pack: unknown): ExternalSkillPackDefinition {
     );
   }
 
-  const skills = pack.skills.map((skill) => validateExternalSkillRegistration(skill, provider.provider_id));
+  const skills = pack.skills.map((skill) =>
+    validateExternalSkillRegistration(skill, provider.provider_id)
+  );
+  const seenSkillIds = new Set<string>();
+  for (const skill of skills) {
+    if (seenSkillIds.has(skill.skill_id)) {
+      throw new ExternalSkillPackAdapterError(
+        "invalid_skill_pack",
+        `duplicate skill_id "${skill.skill_id}" in external skill pack "${packId}".`
+      );
+    }
+
+    seenSkillIds.add(skill.skill_id);
+  }
 
   return {
     pack_id: packId,
