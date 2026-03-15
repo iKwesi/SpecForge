@@ -74,6 +74,65 @@ describe("external skill pack provider adapters", () => {
     );
   });
 
+  it("wraps unexpected adapter load failures in a typed adapter error", async () => {
+    const rootCause = new Error("network timeout");
+
+    await expect(
+      loadExternalSkillPack({
+        adapter_id: "prototype.failing-pack",
+        async load() {
+          throw rootCause;
+        }
+      })
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<ExternalSkillPackAdapterError>>({
+        code: "invalid_adapter",
+        message: "adapter.load() failed.",
+        details: rootCause
+      })
+    );
+  });
+
+  it("fails fast when an external pack reuses an incompatible provider identity", () => {
+    const registry = createBootstrappedSkillRegistry();
+
+    expect(() =>
+      registerExternalSkillPack(registry, {
+        pack_id: "pack.builtin-collision",
+        provider: {
+          provider_id: "builtin",
+          display_name: "External Builtin Collision",
+          source_type: "external",
+          publisher: "Third Party Pack",
+          version: "0.1.0"
+        },
+        skills: [
+          {
+            skill_id: "pack.builtin-collision.analysis",
+            display_name: "Builtin Collision Analysis",
+            version: "0.1.0",
+            provider_id: "builtin",
+            capability_contract: {
+              supported_domains: ["planning"],
+              supported_task_types: ["analysis"],
+              input_contract: "specforge.context_pack.v1",
+              output_contract: "specforge.skill_result.v1"
+            },
+            trust: {
+              trust_level: "verified",
+              verification_status: "verified",
+              requires_approval: true
+            }
+          }
+        ]
+      })
+    ).toThrowError(
+      expect.objectContaining<Partial<ExternalSkillPackAdapterError>>({
+        code: "provider_mismatch"
+      })
+    );
+  });
+
   it("fails with typed errors when the adapter or pack payload is invalid", async () => {
     await expect(
       loadExternalSkillPack({

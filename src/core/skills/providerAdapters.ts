@@ -1,4 +1,6 @@
 import {
+  SKILL_TRUST_LEVELS,
+  SKILL_VERIFICATION_STATUSES,
   type SkillProviderMetadata,
   type SkillRegistration,
   type SkillRegistry
@@ -7,7 +9,8 @@ import {
 export type ExternalSkillPackAdapterErrorCode =
   | "invalid_adapter"
   | "invalid_skill_pack"
-  | "registration_failed";
+  | "registration_failed"
+  | "provider_mismatch";
 
 export class ExternalSkillPackAdapterError extends Error {
   readonly code: ExternalSkillPackAdapterErrorCode;
@@ -54,8 +57,20 @@ export async function loadExternalSkillPack(
     );
   }
 
-  const pack = await adapter.load();
-  return validateExternalSkillPack(pack);
+  try {
+    const pack = await adapter.load();
+    return validateExternalSkillPack(pack);
+  } catch (error) {
+    if (error instanceof ExternalSkillPackAdapterError) {
+      throw error;
+    }
+
+    throw new ExternalSkillPackAdapterError(
+      "invalid_adapter",
+      "adapter.load() failed.",
+      error
+    );
+  }
 }
 
 /**
@@ -80,12 +95,25 @@ export function registerExternalSkillPack(
     const existingProvider = registry.getProvider(validatedPack.provider.provider_id);
     if (!existingProvider) {
       registry.registerProvider(validatedPack.provider);
+    } else if (!providersAreCompatible(existingProvider, validatedPack.provider)) {
+      throw new ExternalSkillPackAdapterError(
+        "provider_mismatch",
+        `Existing provider metadata is incompatible with external skill pack ${validatedPack.pack_id} for provider_id ${validatedPack.provider.provider_id}.`,
+        {
+          existing_provider: existingProvider,
+          pack_provider: validatedPack.provider
+        }
+      );
     }
 
     for (const skill of validatedPack.skills) {
       registry.registerSkill(skill);
     }
   } catch (error) {
+    if (error instanceof ExternalSkillPackAdapterError) {
+      throw error;
+    }
+
     throw new ExternalSkillPackAdapterError(
       "registration_failed",
       `Unable to register external skill pack ${validatedPack.pack_id}.`,
@@ -292,10 +320,10 @@ function validateTrustMetadata(trust: unknown): SkillRegistration["trust"] {
     "skill.trust.trust_level",
     "invalid_skill_pack"
   );
-  if (!["trusted", "verified", "unverified"].includes(trustLevel)) {
+  if (!SKILL_TRUST_LEVELS.includes(trustLevel as SkillRegistration["trust"]["trust_level"])) {
     throw new ExternalSkillPackAdapterError(
       "invalid_skill_pack",
-      "skill.trust.trust_level must be trusted, verified, or unverified."
+      `skill.trust.trust_level must be one of ${SKILL_TRUST_LEVELS.join(", ")}.`
     );
   }
 
@@ -304,10 +332,14 @@ function validateTrustMetadata(trust: unknown): SkillRegistration["trust"] {
     "skill.trust.verification_status",
     "invalid_skill_pack"
   );
-  if (!["verified", "self-attested", "unknown"].includes(verificationStatus)) {
+  if (
+    !SKILL_VERIFICATION_STATUSES.includes(
+      verificationStatus as SkillRegistration["trust"]["verification_status"]
+    )
+  ) {
     throw new ExternalSkillPackAdapterError(
       "invalid_skill_pack",
-      "skill.trust.verification_status must be verified, self-attested, or unknown."
+      `skill.trust.verification_status must be one of ${SKILL_VERIFICATION_STATUSES.join(", ")}.`
     );
   }
 
@@ -400,5 +432,19 @@ function isSkillRegistry(value: unknown): value is SkillRegistry {
     typeof value.getProvider === "function" &&
     typeof value.registerProvider === "function" &&
     typeof value.registerSkill === "function"
+  );
+}
+
+function providersAreCompatible(
+  existing: SkillProviderMetadata,
+  expected: SkillProviderMetadata
+): boolean {
+  return (
+    existing.provider_id === expected.provider_id &&
+    existing.display_name === expected.display_name &&
+    existing.source_type === expected.source_type &&
+    existing.publisher === expected.publisher &&
+    existing.version === expected.version &&
+    existing.installation_root === expected.installation_root
   );
 }
