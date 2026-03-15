@@ -271,9 +271,21 @@ function renderArchitectureSummaryMarkdown(
   repoProfile: RepoProfileArtifact,
   architectureSummary: ArchitectureSummaryArtifact
 ): string {
-  return ["# Architecture Summary", "", renderEvidenceSection(repoProfile, architectureSummary)]
-    .join("\n")
-    .trimEnd();
+  const parts: string[] = [];
+
+  if (architectureSummary.summary_markdown) {
+    parts.push(architectureSummary.summary_markdown.trimEnd());
+  }
+
+  const evidenceSection = renderEvidenceSection(repoProfile, architectureSummary);
+  if (evidenceSection.trim().length > 0) {
+    if (parts.length > 0) {
+      parts.push("");
+    }
+    parts.push(evidenceSection);
+  }
+
+  return parts.join("\n").trimEnd();
 }
 
 function renderArchitectureDocsContent(
