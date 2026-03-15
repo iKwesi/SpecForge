@@ -255,6 +255,50 @@ describe("replayable run diagnostics", () => {
       })
     );
   });
+
+  it("fails with invalid_record when replayable has the wrong type", () => {
+    expect(() =>
+      diagnoseContractDrift({
+        record: {
+          schema_version: "v1",
+          run_id: "run-007",
+          replayable: "yes",
+          missing_source_refs: [],
+          artifacts: [],
+          replay_order: []
+        },
+        artifact_index: createArtifactIndex(),
+        contract_artifact_ids: ["spec.main"]
+      })
+    ).toThrowError(
+      expect.objectContaining<Partial<ReplayableRunError>>({
+        code: "invalid_record",
+        message: "replayable must be a boolean."
+      })
+    );
+  });
+
+  it("fails with invalid_record when missing_source_refs has the wrong type", () => {
+    expect(() =>
+      diagnoseContractDrift({
+        record: {
+          schema_version: "v1",
+          run_id: "run-008",
+          replayable: true,
+          missing_source_refs: "not-an-array",
+          artifacts: [],
+          replay_order: []
+        },
+        artifact_index: createArtifactIndex(),
+        contract_artifact_ids: ["spec.main"]
+      })
+    ).toThrowError(
+      expect.objectContaining<Partial<ReplayableRunError>>({
+        code: "invalid_record",
+        message: "replayable run record missing_source_refs must be an array."
+      })
+    );
+  });
 });
 
 function createArtifact(input: {

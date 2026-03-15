@@ -446,12 +446,15 @@ function normalizeReplayableRunRecord(value: unknown): ReplayableRunRecord {
   return {
     schema_version: "v1",
     run_id: normalizeNonEmptyString(value.run_id, "run_id", "invalid_record"),
-    replayable: typeof value.replayable === "boolean" ? value.replayable : false,
+    replayable: normalizeBoolean(value.replayable, "replayable", "invalid_record"),
     missing_source_refs: Array.isArray(value.missing_source_refs)
-      ? value.missing_source_refs.map((sourceRef, index) =>
-          normalizeSourceRef(sourceRef, "record.missing_source_refs", index, "invalid_record")
-        )
-      : [],
+      ? normalizeSourceRefs(value.missing_source_refs, "record.missing_source_refs", "invalid_record")
+      : (() => {
+          throw new ReplayableRunError(
+            "invalid_record",
+            "replayable run record missing_source_refs must be an array."
+          );
+        })(),
     artifacts: Array.isArray(value.artifacts)
       ? value.artifacts.map((artifact, index) =>
           normalizeRecordArtifactEntry(artifact, index)
@@ -533,9 +536,7 @@ function normalizeReplayStepSourceRefs(value: unknown): ArtifactSourceRef[] {
     );
   }
 
-  return value.map((sourceRef, sourceRefIndex) =>
-    normalizeSourceRef(sourceRef, "record.replay_order", sourceRefIndex, "invalid_record")
-  );
+  return normalizeSourceRefs(value, "record.replay_order", "invalid_record");
 }
 
 function normalizeContractArtifactIds(contractArtifactIds: string[]): Set<string> {
@@ -563,6 +564,18 @@ function normalizeNonEmptyString(
   }
 
   return value.trim();
+}
+
+function normalizeBoolean(
+  value: unknown,
+  fieldName: string,
+  code: ReplayableRunErrorCode
+): boolean {
+  if (typeof value !== "boolean") {
+    throw new ReplayableRunError(code, `${fieldName} must be a boolean.`);
+  }
+
+  return value;
 }
 
 function normalizeArtifactVersion(
@@ -616,9 +629,12 @@ function compareContractDriftIssues(left: ContractDriftIssue, right: ContractDri
     return byConsumerId;
   }
 
-  const byConsumerVersion = left.consumer_artifact_version.localeCompare(right.consumer_artifact_version);
+  const byConsumerVersion = compareArtifactVersions(
+    left.consumer_artifact_version,
+    right.consumer_artifact_version
+  );
   if (byConsumerVersion !== 0) {
-    return compareArtifactVersions(left.consumer_artifact_version, right.consumer_artifact_version);
+    return byConsumerVersion;
   }
 
   const byContractId = left.contract_artifact_id.localeCompare(right.contract_artifact_id);
