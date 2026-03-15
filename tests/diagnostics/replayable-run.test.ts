@@ -204,7 +204,7 @@ describe("replayable run diagnostics", () => {
               source_refs: []
             }
           ]
-        } as never,
+        },
         artifact_index: createArtifactIndex(),
         contract_artifact_ids: ["spec.main"]
       })
@@ -212,6 +212,46 @@ describe("replayable run diagnostics", () => {
       expect.objectContaining<Partial<ReplayableRunError>>({
         code: "invalid_record",
         message: "artifact_version must be in v<number> format: record.replay_order"
+      })
+    );
+  });
+
+  it("fails with invalid_record when replay step source_refs is not an array", () => {
+    expect(() =>
+      diagnoseContractDrift({
+        record: {
+          schema_version: "v1",
+          run_id: "run-006",
+          replayable: true,
+          missing_source_refs: [],
+          artifacts: [
+            {
+              path: "/tmp/spec.main-v1.json",
+              artifact_id: "spec.main",
+              artifact_version: "v1",
+              generator: "operation.generateSpecPack",
+              created_timestamp: "2026-03-15T00:00:00.000Z",
+              checksum: "spec.main-v1-checksum",
+              source_refs: []
+            }
+          ],
+          replay_order: [
+            {
+              artifact_id: "spec.main",
+              artifact_version: "v1",
+              generator: "operation.generateSpecPack",
+              path: "/tmp/spec.main-v1.json",
+              source_refs: "not-an-array"
+            }
+          ]
+        },
+        artifact_index: createArtifactIndex(),
+        contract_artifact_ids: ["spec.main"]
+      })
+    ).toThrowError(
+      expect.objectContaining<Partial<ReplayableRunError>>({
+        code: "invalid_record",
+        message: "record.replay_order source_refs must be an array when provided."
       })
     );
   });

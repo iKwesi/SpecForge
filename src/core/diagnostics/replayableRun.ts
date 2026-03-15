@@ -81,7 +81,7 @@ export interface ContractDriftIssue {
 }
 
 export interface DiagnoseContractDriftInput {
-  record: ReplayableRunRecord;
+  record: unknown;
   artifact_index: ArtifactIndex;
   contract_artifact_ids: string[];
 }
@@ -431,7 +431,7 @@ function buildReplayOrder(
   return ordered;
 }
 
-function normalizeReplayableRunRecord(value: ReplayableRunRecord): ReplayableRunRecord {
+function normalizeReplayableRunRecord(value: unknown): ReplayableRunRecord {
   if (!isPlainRecord(value)) {
     throw new ReplayableRunError("invalid_record", "replayable run record must be an object.");
   }
@@ -517,12 +517,25 @@ function normalizeReplayStep(step: unknown, index: number): ReplayableRunStep {
     ),
     generator: normalizeNonEmptyString(step.generator, "generator", "invalid_record"),
     path: normalizeNonEmptyString(step.path, "path", "invalid_record"),
-    source_refs: Array.isArray(step.source_refs)
-      ? step.source_refs.map((sourceRef, sourceRefIndex) =>
-          normalizeSourceRef(sourceRef, "record.replay_order", sourceRefIndex, "invalid_record")
-        )
-      : []
+    source_refs: normalizeReplayStepSourceRefs(step.source_refs)
   };
+}
+
+function normalizeReplayStepSourceRefs(value: unknown): ArtifactSourceRef[] {
+  if (value === undefined) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throw new ReplayableRunError(
+      "invalid_record",
+      "record.replay_order source_refs must be an array when provided."
+    );
+  }
+
+  return value.map((sourceRef, sourceRefIndex) =>
+    normalizeSourceRef(sourceRef, "record.replay_order", sourceRefIndex, "invalid_record")
+  );
 }
 
 function normalizeContractArtifactIds(contractArtifactIds: string[]): Set<string> {
