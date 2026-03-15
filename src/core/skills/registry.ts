@@ -165,6 +165,14 @@ export function createSkillRegistry(input: CreateSkillRegistryInput = {}): Skill
 }
 
 function normalizeProvider(provider: SkillProviderMetadata): SkillProviderMetadata {
+  if (!isPlainRecord(provider)) {
+    throw new SkillRegistryError(
+      "invalid_provider",
+      "provider must be a non-null object.",
+      { provider }
+    );
+  }
+
   const sourceType = normalizeEnumValue(
     provider.source_type,
     SKILL_PROVIDER_SOURCE_TYPES,
@@ -185,10 +193,14 @@ function normalizeProvider(provider: SkillProviderMetadata): SkillProviderMetada
 }
 
 function normalizeSkill(skill: SkillRegistration): SkillRegistration {
+  if (!isPlainRecord(skill)) {
+    throw new SkillRegistryError("invalid_skill", "skill must be a non-null object.", { skill });
+  }
+
   return {
     skill_id: normalizeNonEmptyString(skill.skill_id, "skill_id", "invalid_skill"),
     display_name: normalizeNonEmptyString(skill.display_name, "display_name", "invalid_skill"),
-    ...(skill.description ? { description: skill.description.trim() } : {}),
+    ...normalizeOptionalDescription(skill.description),
     version: normalizeNonEmptyString(skill.version, "version", "invalid_skill"),
     provider_id: normalizeNonEmptyString(skill.provider_id, "provider_id", "invalid_skill"),
     capability_contract: normalizeCapabilityContract(skill.capability_contract),
@@ -371,6 +383,26 @@ function normalizeOptionalStringFields<T extends object, K extends keyof T & str
   }
 
   return normalized;
+}
+
+function normalizeOptionalDescription(description: unknown): { description?: string } {
+  if (description === undefined) {
+    return {};
+  }
+
+  if (typeof description !== "string") {
+    throw new SkillRegistryError(
+      "invalid_skill",
+      "description must be a string when provided."
+    );
+  }
+
+  const trimmedDescription = description.trim();
+  return trimmedDescription.length > 0 ? { description: trimmedDescription } : {};
+}
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function cloneProvider(provider: SkillProviderMetadata): SkillProviderMetadata {

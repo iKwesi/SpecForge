@@ -208,6 +208,12 @@ describe("skill registry", () => {
   it("fails with typed errors when providers or skills are invalid or duplicated", () => {
     const registry = createSkillRegistry();
 
+    expect(() => registry.registerProvider(undefined as never)).toThrowError(
+      expect.objectContaining<Partial<SkillRegistryError>>({
+        code: "invalid_provider"
+      })
+    );
+
     expect(() =>
       registry.registerProvider({
         provider_id: "builtin",
@@ -330,6 +336,77 @@ describe("skill registry", () => {
         code: "invalid_skill"
       })
     );
+
+    expect(() => registry.registerSkill(null as never)).toThrowError(
+      expect.objectContaining<Partial<SkillRegistryError>>({
+        code: "invalid_skill"
+      })
+    );
+
+    expect(() =>
+      registry.registerSkill({
+        skill_id: "bad.description",
+        display_name: "Bad Description",
+        description: 123 as never,
+        version: "1.0.0",
+        provider_id: "builtin",
+        capability_contract: {
+          supported_domains: ["planning"],
+          supported_task_types: ["drafting"],
+          input_contract: "a",
+          output_contract: "b"
+        },
+        trust: {
+          trust_level: "trusted",
+          verification_status: "verified",
+          requires_approval: false
+        }
+      })
+    ).toThrowError(
+      expect.objectContaining<Partial<SkillRegistryError>>({
+        code: "invalid_skill"
+      })
+    );
+  });
+
+  it("drops whitespace-only descriptions instead of storing empty metadata", () => {
+    const registry = createSkillRegistry({
+      providers: [
+        {
+          provider_id: "builtin",
+          display_name: "SpecForge Built-ins",
+          source_type: "built-in"
+        }
+      ],
+      skills: [
+        {
+          skill_id: "builtin.whitespace-description",
+          display_name: "Whitespace Description",
+          description: "   ",
+          version: "1.0.0",
+          provider_id: "builtin",
+          capability_contract: {
+            supported_domains: ["planning"],
+            supported_task_types: ["drafting"],
+            input_contract: "specforge.idea_brief.v1",
+            output_contract: "specforge.prd.v1"
+          },
+          trust: {
+            trust_level: "trusted",
+            verification_status: "verified",
+            requires_approval: false
+          }
+        }
+      ]
+    });
+
+    const skill = registry.getSkill("builtin.whitespace-description");
+    expect(skill).toEqual(
+      expect.objectContaining({
+        skill_id: "builtin.whitespace-description"
+      })
+    );
+    expect(skill).not.toHaveProperty("description");
   });
 
   it("returns defensive copies so external mutation does not change registry state", () => {
