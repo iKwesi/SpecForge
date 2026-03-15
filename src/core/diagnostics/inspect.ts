@@ -15,12 +15,18 @@ import {
   type ProfileRepositoryInput,
   type ProfileRepositoryResult
 } from "../operations/profileRepository.js";
+import {
+  UpdateArchitectureDocsError,
+  runUpdateArchitectureDocs,
+  type UpdateArchitectureDocsInput,
+  type UpdateArchitectureDocsResult
+} from "../operations/updateArchitectureDocs.js";
 
 const STANDARD_MAX_FILES = 200;
 const DEEP_MAX_FILES = 1000;
 
 export type InspectScanMode = "standard" | "deep";
-export type InspectErrorCode = "profile_failed" | "architecture_failed";
+export type InspectErrorCode = "profile_failed" | "architecture_failed" | "architecture_docs_failed";
 
 export class InspectError extends Error {
   readonly code: InspectErrorCode;
@@ -39,6 +45,8 @@ export interface InspectResult {
   repository_root: string;
   repo_profile_path: string;
   architecture_summary_path: string;
+  architecture_summary_markdown_path?: string;
+  architecture_docs_path?: string;
   repo_profile: RepoProfileArtifact;
   architecture_summary: ArchitectureSummaryArtifact;
   dry_run?: DryRunReport;
@@ -49,17 +57,23 @@ export interface RunInspectInput {
   artifact_dir?: string;
   deep?: boolean;
   dry_run?: boolean;
+  write_architecture_docs?: boolean;
+  docs_path?: string;
   created_timestamp?: Date;
   profile_runner?: (input: ProfileRepositoryInput) => Promise<ProfileRepositoryResult>;
   architecture_runner?: (input: MapArchitectureFromRepoInput) => Promise<MapArchitectureFromRepoResult>;
+  architecture_docs_runner?: (
+    input: UpdateArchitectureDocsInput
+  ) => Promise<UpdateArchitectureDocsResult>;
 }
 
 /**
- * Produce repository inspection artifacts without modifying application code.
+ * Produce bounded repository inspection outputs without modifying application code.
  *
- * This orchestration layer intentionally composes the existing bounded repository
- * profiling and architecture mapping operations. The only files written are the
- * published artifacts under .specforge for the inspected repository.
+ * By default this orchestration layer writes only the published inspect artifacts
+ * under `.specforge` for the inspected repository. When `write_architecture_docs`
+ * is enabled, it can also refresh maintained architecture markdown such as
+ * `docs/ARCHITECTURE.md` or a caller-provided `docs_path`.
  */
 export async function runInspect(input: RunInspectInput = {}): Promise<InspectResult> {
   const repositoryRoot = input.repository_root ?? process.cwd();
@@ -69,6 +83,7 @@ export async function runInspect(input: RunInspectInput = {}): Promise<InspectRe
   const maxFiles = scanMode === "deep" ? DEEP_MAX_FILES : STANDARD_MAX_FILES;
   const profileRunner = input.profile_runner ?? runProfileRepository;
   const architectureRunner = input.architecture_runner ?? runMapArchitectureFromRepo;
+  const architectureDocsRunner = input.architecture_docs_runner ?? runUpdateArchitectureDocs;
   let dryRun: DryRunReport | undefined;
 
   let repoProfile: RepoProfileArtifact;
@@ -118,11 +133,44 @@ export async function runInspect(input: RunInspectInput = {}): Promise<InspectRe
     throw error;
   }
 
+  let architectureSummaryMarkdownPath: string | undefined;
+  let architectureDocsPath: string | undefined;
+  if (input.write_architecture_docs) {
+    try {
+      const result = await architectureDocsRunner({
+        project_mode: "existing-repo",
+        repository_root: repositoryRoot,
+        repo_profile: repoProfile,
+        architecture_summary: architectureSummary,
+        artifact_dir: artifactRoot,
+        ...(input.docs_path ? { docs_path: input.docs_path } : {}),
+        ...(input.dry_run ? { dry_run: true } : {})
+      });
+      architectureSummaryMarkdownPath = result.architecture_summary_markdown_path;
+      architectureDocsPath = result.architecture_docs_path;
+      dryRun = mergeDryRunReports(dryRun, "dry_run" in result ? result.dry_run : undefined);
+    } catch (error) {
+      if (error instanceof UpdateArchitectureDocsError) {
+        throw new InspectError(
+          "architecture_docs_failed",
+          `Architecture docs generation failed: ${error.message}`,
+          error
+        );
+      }
+
+      throw error;
+    }
+  }
+
   return {
     scan_mode: scanMode,
     repository_root: repositoryRoot,
     repo_profile_path: join(artifactRoot, ".specforge", "repo_profile.json"),
     architecture_summary_path: join(artifactRoot, ".specforge", "architecture_summary.json"),
+    ...(architectureSummaryMarkdownPath
+      ? { architecture_summary_markdown_path: architectureSummaryMarkdownPath }
+      : {}),
+    ...(architectureDocsPath ? { architecture_docs_path: architectureDocsPath } : {}),
     repo_profile: repoProfile,
     architecture_summary: architectureSummary,
     ...(dryRun ? { dry_run: dryRun } : {})
@@ -140,6 +188,14 @@ export function formatInspectReport(result: InspectResult): string {
     `Repo Profile Path: ${result.repo_profile_path}`,
     `Architecture Summary Path: ${result.architecture_summary_path}`
   ];
+
+  if (result.architecture_summary_markdown_path) {
+    lines.push(`Architecture Summary Markdown Path: ${result.architecture_summary_markdown_path}`);
+  }
+
+  if (result.architecture_docs_path) {
+    lines.push(`Architecture Docs Path: ${result.architecture_docs_path}`);
+  }
 
   if (result.dry_run) {
     lines.push("", "Dry Run: enabled");

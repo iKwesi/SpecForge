@@ -158,4 +158,36 @@ describe("runInspect success paths", () => {
     expect(report).toContain("Dry Run: enabled");
     expect(report).toContain("Would publish repo_profile artifact metadata");
   });
+
+  it("can generate maintained architecture docs from inspect artifacts when explicitly requested", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "specforge-inspect-docs-"));
+
+    await writeRepoFiles(repoRoot, [
+      { path: "package.json", content: "{\"name\":\"demo\"}" },
+      { path: "src/api/routes.ts", content: "export const routes = [];" },
+      { path: "src/api/service.ts", content: "export const service = {};" },
+      { path: "docs/ARCHITECTURE.md", content: "# SpecForge Architecture\n\nManual intro.\n" }
+    ]);
+
+    const result = await runInspect({
+      repository_root: repoRoot,
+      write_architecture_docs: true,
+      created_timestamp: new Date("2026-03-14T00:20:00.000Z")
+    });
+
+    expect(result.architecture_summary_markdown_path).toBe(
+      join(repoRoot, ".specforge", "architecture_summary.md")
+    );
+    expect(result.architecture_docs_path).toBe(join(repoRoot, "docs", "ARCHITECTURE.md"));
+    expect(await readFile(result.architecture_summary_markdown_path!, "utf8")).toContain(
+      "## Artifact Flow"
+    );
+    expect(await readFile(result.architecture_docs_path!, "utf8")).toContain(
+      "<!-- specforge:begin generated-architecture -->"
+    );
+
+    const report = formatInspectReport(result);
+    expect(report).toContain("Architecture Docs Path");
+    expect(report).toContain("Architecture Summary Markdown Path");
+  });
 });
