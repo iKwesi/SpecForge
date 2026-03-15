@@ -232,18 +232,21 @@ export function formatContractDriftReport(result: ContractDriftResult): string {
   return `${lines.join("\n")}\n`;
 }
 
-function normalizeReplayableArtifact(input: ReplayableRunArtifactInput): ReplayableRunArtifactEvidence {
+function normalizeReplayableArtifact(
+  input: { path: unknown; value: unknown },
+  code: ReplayableRunErrorCode = "invalid_artifact"
+): ReplayableRunArtifactEvidence {
   if (!isPlainRecord(input)) {
     throw new ReplayableRunError(
-      "invalid_artifact",
+      code,
       "replayable artifact input must be an object."
     );
   }
 
-  const path = normalizeNonEmptyString(input.path, "path", "invalid_artifact");
+  const path = normalizeNonEmptyString(input.path, "path", code);
   if (!isPlainRecord(input.value)) {
     throw new ReplayableRunError(
-      "invalid_artifact",
+      code,
       `artifact file must contain an object: ${path}`
     );
   }
@@ -251,12 +254,12 @@ function normalizeReplayableArtifact(input: ReplayableRunArtifactInput): Replaya
   const value = input.value;
   if (!isPlainRecord(value.metadata)) {
     throw new ReplayableRunError(
-      "invalid_artifact",
+      code,
       `artifact metadata must be an object: ${path}`
     );
   }
 
-  const metadata = normalizeArtifactMetadata(value.metadata, path);
+  const metadata = normalizeArtifactMetadata(value.metadata, path, code);
 
   return {
     path,
@@ -272,40 +275,45 @@ function normalizeReplayableArtifact(input: ReplayableRunArtifactInput): Replaya
   };
 }
 
-function normalizeArtifactMetadata(value: Record<string, unknown>, path: string): ArtifactMetadata {
+function normalizeArtifactMetadata(
+  value: Record<string, unknown>,
+  path: string,
+  code: ReplayableRunErrorCode
+): ArtifactMetadata {
   const sourceRefsRaw = value.source_refs;
   if (!Array.isArray(sourceRefsRaw)) {
     throw new ReplayableRunError(
-      "invalid_artifact",
+      code,
       `artifact metadata.source_refs must be an array: ${path}`
     );
   }
 
   return {
-    artifact_id: normalizeNonEmptyString(value.artifact_id, "artifact_id", "invalid_artifact"),
-    artifact_version: normalizeArtifactVersion(value.artifact_version, path),
+    artifact_id: normalizeNonEmptyString(value.artifact_id, "artifact_id", code),
+    artifact_version: normalizeArtifactVersion(value.artifact_version, path, code),
     ...(value.parent_version !== undefined
-      ? { parent_version: normalizeArtifactVersion(value.parent_version, path) }
+      ? { parent_version: normalizeArtifactVersion(value.parent_version, path, code) }
       : {}),
     created_timestamp: normalizeNonEmptyString(
       value.created_timestamp,
       "created_timestamp",
-      "invalid_artifact"
+      code
     ),
-    generator: normalizeNonEmptyString(value.generator, "generator", "invalid_artifact"),
-    source_refs: normalizeSourceRefs(sourceRefsRaw, path),
-    checksum: normalizeNonEmptyString(value.checksum, "checksum", "invalid_artifact")
+    generator: normalizeNonEmptyString(value.generator, "generator", code),
+    source_refs: normalizeSourceRefs(sourceRefsRaw, path, code),
+    checksum: normalizeNonEmptyString(value.checksum, "checksum", code)
   };
 }
 
 function normalizeSourceRef(
   value: unknown,
   path: string,
-  index: number
+  index: number,
+  code: ReplayableRunErrorCode
 ): ArtifactSourceRef {
   if (!isPlainRecord(value)) {
     throw new ReplayableRunError(
-      "invalid_artifact",
+      code,
       `artifact metadata.source_refs[${index}] must be an object: ${path}`
     );
   }
@@ -314,17 +322,21 @@ function normalizeSourceRef(
     artifact_id: normalizeNonEmptyString(
       value.artifact_id,
       `source_refs[${index}].artifact_id`,
-      "invalid_artifact"
+      code
     ),
-    artifact_version: normalizeArtifactVersion(value.artifact_version, path)
+    artifact_version: normalizeArtifactVersion(value.artifact_version, path, code)
   };
 }
 
-function normalizeSourceRefs(value: unknown[], path: string): ArtifactSourceRef[] {
+function normalizeSourceRefs(
+  value: unknown[],
+  path: string,
+  code: ReplayableRunErrorCode
+): ArtifactSourceRef[] {
   const byKey = new Map<string, ArtifactSourceRef>();
 
   for (const [index, sourceRef] of value.entries()) {
-    const normalized = normalizeSourceRef(sourceRef, path, index);
+    const normalized = normalizeSourceRef(sourceRef, path, index, code);
     byKey.set(toArtifactKey(normalized.artifact_id, normalized.artifact_version), normalized);
   }
 
@@ -375,14 +387,18 @@ function buildReplayOrder(
     inboundCount.set(artifactKey, internalDependencyCount);
   }
 
-  const queue = artifacts
-    .filter((artifact) => inboundCount.get(toArtifactKey(artifact.artifact_id, artifact.artifact_version)) === 0)
-    .sort(compareArtifacts);
+  const queue = createArtifactPriorityQueue(compareArtifacts);
+  for (const artifact of artifacts) {
+    const artifactKey = toArtifactKey(artifact.artifact_id, artifact.artifact_version);
+    if (inboundCount.get(artifactKey) === 0) {
+      queue.push(artifact);
+    }
+  }
 
   const ordered: ReplayableRunStep[] = [];
 
-  while (queue.length > 0) {
-    const next = queue.shift()!;
+  while (queue.size() > 0) {
+    const next = queue.pop()!;
     const nextKey = toArtifactKey(next.artifact_id, next.artifact_version);
 
     ordered.push({
@@ -400,7 +416,6 @@ function buildReplayOrder(
         const dependent = artifactMap.get(dependentKey);
         if (dependent) {
           queue.push(dependent);
-          queue.sort(compareArtifacts);
         }
       }
     }
@@ -434,25 +449,12 @@ function normalizeReplayableRunRecord(value: ReplayableRunRecord): ReplayableRun
     replayable: typeof value.replayable === "boolean" ? value.replayable : false,
     missing_source_refs: Array.isArray(value.missing_source_refs)
       ? value.missing_source_refs.map((sourceRef, index) =>
-          normalizeSourceRef(sourceRef, "record.missing_source_refs", index)
+          normalizeSourceRef(sourceRef, "record.missing_source_refs", index, "invalid_record")
         )
       : [],
     artifacts: Array.isArray(value.artifacts)
-      ? value.artifacts.map((artifact) =>
-          normalizeReplayableArtifact({
-            path: artifact.path,
-            value: {
-              kind: artifact.kind,
-              metadata: {
-                artifact_id: artifact.artifact_id,
-                artifact_version: artifact.artifact_version,
-                created_timestamp: artifact.created_timestamp,
-                generator: artifact.generator,
-                source_refs: artifact.source_refs,
-                checksum: artifact.checksum
-              }
-            }
-          })
+      ? value.artifacts.map((artifact, index) =>
+          normalizeRecordArtifactEntry(artifact, index)
         )
       : (() => {
           throw new ReplayableRunError(
@@ -461,26 +463,65 @@ function normalizeReplayableRunRecord(value: ReplayableRunRecord): ReplayableRun
           );
         })(),
     replay_order: Array.isArray(value.replay_order)
-      ? value.replay_order.map((step) => ({
-          artifact_id: normalizeNonEmptyString(step.artifact_id, "artifact_id", "invalid_record"),
-          artifact_version: normalizeArtifactVersion(
-            step.artifact_version,
-            "record.replay_order"
-          ),
-          generator: normalizeNonEmptyString(step.generator, "generator", "invalid_record"),
-          path: normalizeNonEmptyString(step.path, "path", "invalid_record"),
-          source_refs: Array.isArray(step.source_refs)
-            ? step.source_refs.map((sourceRef, index) =>
-                normalizeSourceRef(sourceRef, "record.replay_order", index)
-              )
-            : []
-        }))
+      ? value.replay_order.map((step, index) => normalizeReplayStep(step, index))
       : (() => {
           throw new ReplayableRunError(
             "invalid_record",
             "replayable run record replay_order must be an array."
           );
         })()
+  };
+}
+
+function normalizeRecordArtifactEntry(
+  artifact: unknown,
+  index: number
+): ReplayableRunArtifactEvidence {
+  if (!isPlainRecord(artifact)) {
+    throw new ReplayableRunError(
+      "invalid_record",
+      `replayable run record artifacts[${index}] must be an object.`
+    );
+  }
+
+  return normalizeReplayableArtifact({
+    path: artifact.path,
+    value: {
+      kind: artifact.kind,
+      metadata: {
+        artifact_id: artifact.artifact_id,
+        artifact_version: artifact.artifact_version,
+        created_timestamp: artifact.created_timestamp,
+        generator: artifact.generator,
+        source_refs: artifact.source_refs,
+        checksum: artifact.checksum
+      }
+    }
+  }, "invalid_record");
+}
+
+function normalizeReplayStep(step: unknown, index: number): ReplayableRunStep {
+  if (!isPlainRecord(step)) {
+    throw new ReplayableRunError(
+      "invalid_record",
+      `replayable run record replay_order[${index}] must be an object.`
+    );
+  }
+
+  return {
+    artifact_id: normalizeNonEmptyString(step.artifact_id, "artifact_id", "invalid_record"),
+    artifact_version: normalizeArtifactVersion(
+      step.artifact_version,
+      "record.replay_order",
+      "invalid_record"
+    ),
+    generator: normalizeNonEmptyString(step.generator, "generator", "invalid_record"),
+    path: normalizeNonEmptyString(step.path, "path", "invalid_record"),
+    source_refs: Array.isArray(step.source_refs)
+      ? step.source_refs.map((sourceRef, sourceRefIndex) =>
+          normalizeSourceRef(sourceRef, "record.replay_order", sourceRefIndex, "invalid_record")
+        )
+      : []
   };
 }
 
@@ -511,10 +552,14 @@ function normalizeNonEmptyString(
   return value.trim();
 }
 
-function normalizeArtifactVersion(value: unknown, path: string): ArtifactVersion {
+function normalizeArtifactVersion(
+  value: unknown,
+  path: string,
+  code: ReplayableRunErrorCode = "invalid_artifact"
+): ArtifactVersion {
   if (typeof value !== "string" || !/^v\d+$/.test(value)) {
     throw new ReplayableRunError(
-      "invalid_artifact",
+      code,
       `artifact_version must be in v<number> format: ${path}`
     );
   }
@@ -577,6 +622,79 @@ function compareArtifactVersions(left: ArtifactVersion, right: ArtifactVersion):
 
 function parseArtifactVersion(version: ArtifactVersion): number {
   return Number.parseInt(version.slice(1), 10);
+}
+
+function createArtifactPriorityQueue<T>(compare: (left: T, right: T) => number): {
+  push(item: T): void;
+  pop(): T | undefined;
+  size(): number;
+} {
+  const heap: T[] = [];
+
+  return {
+    push(item) {
+      heap.push(item);
+      bubbleUp(heap.length - 1);
+    },
+    pop() {
+      if (heap.length === 0) {
+        return undefined;
+      }
+
+      const root = heap[0];
+      const last = heap.pop()!;
+      if (heap.length > 0) {
+        heap[0] = last;
+        bubbleDown(0);
+      }
+
+      return root;
+    },
+    size() {
+      return heap.length;
+    }
+  };
+
+  function bubbleUp(index: number): void {
+    while (index > 0) {
+      const parentIndex = (index - 1) >> 1;
+      if (compare(heap[parentIndex]!, heap[index]!) <= 0) {
+        return;
+      }
+
+      [heap[parentIndex], heap[index]] = [heap[index]!, heap[parentIndex]!];
+      index = parentIndex;
+    }
+  }
+
+  function bubbleDown(index: number): void {
+    while (true) {
+      const leftIndex = index * 2 + 1;
+      const rightIndex = leftIndex + 1;
+      let smallestIndex = index;
+
+      if (
+        leftIndex < heap.length &&
+        compare(heap[leftIndex]!, heap[smallestIndex]!) < 0
+      ) {
+        smallestIndex = leftIndex;
+      }
+
+      if (
+        rightIndex < heap.length &&
+        compare(heap[rightIndex]!, heap[smallestIndex]!) < 0
+      ) {
+        smallestIndex = rightIndex;
+      }
+
+      if (smallestIndex === index) {
+        return;
+      }
+
+      [heap[index], heap[smallestIndex]] = [heap[smallestIndex]!, heap[index]!];
+      index = smallestIndex;
+    }
+  }
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {

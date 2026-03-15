@@ -7,7 +7,8 @@ import {
 import {
   diagnoseContractDrift,
   formatContractDriftReport,
-  recordReplayableRun
+  recordReplayableRun,
+  ReplayableRunError
 } from "../../src/core/diagnostics/replayableRun.js";
 
 describe("replayable run diagnostics", () => {
@@ -150,6 +151,68 @@ describe("replayable run diagnostics", () => {
     );
     expect(formatContractDriftReport(drift)).toContain(
       "task_result@v1 depends on missing contract version schemas/core.schema.json@v2."
+    );
+  });
+
+  it("fails with invalid_record when serialized artifacts contain non-object entries", () => {
+    expect(() =>
+      diagnoseContractDrift({
+        record: {
+          schema_version: "v1",
+          run_id: "run-004",
+          replayable: true,
+          missing_source_refs: [],
+          artifacts: [null as never],
+          replay_order: []
+        },
+        artifact_index: createArtifactIndex(),
+        contract_artifact_ids: ["spec.main"]
+      })
+    ).toThrowError(
+      expect.objectContaining<Partial<ReplayableRunError>>({
+        code: "invalid_record",
+        message: "replayable run record artifacts[0] must be an object."
+      })
+    );
+  });
+
+  it("fails with invalid_record when serialized replay steps contain invalid versions", () => {
+    expect(() =>
+      diagnoseContractDrift({
+        record: {
+          schema_version: "v1",
+          run_id: "run-005",
+          replayable: true,
+          missing_source_refs: [],
+          artifacts: [
+            {
+              path: "/tmp/spec.main-v1.json",
+              artifact_id: "spec.main",
+              artifact_version: "v1",
+              generator: "operation.generateSpecPack",
+              created_timestamp: "2026-03-15T00:00:00.000Z",
+              checksum: "spec.main-v1-checksum",
+              source_refs: []
+            }
+          ],
+          replay_order: [
+            {
+              artifact_id: "spec.main",
+              artifact_version: "bad-version",
+              generator: "operation.generateSpecPack",
+              path: "/tmp/spec.main-v1.json",
+              source_refs: []
+            }
+          ]
+        } as never,
+        artifact_index: createArtifactIndex(),
+        contract_artifact_ids: ["spec.main"]
+      })
+    ).toThrowError(
+      expect.objectContaining<Partial<ReplayableRunError>>({
+        code: "invalid_record",
+        message: "artifact_version must be in v<number> format: record.replay_order"
+      })
     );
   });
 });
