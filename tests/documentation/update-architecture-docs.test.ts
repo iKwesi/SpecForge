@@ -26,7 +26,7 @@ function buildRepoProfile(repositoryRoot: string): RepoProfileArtifact {
     repository_root: repositoryRoot,
     scan: {
       max_files: 200,
-      scanned_file_count: 12,
+      scanned_file_count: 3,
       truncated: false,
       ignored_directories: [".git", ".specforge"]
     },
@@ -286,6 +286,23 @@ describe("updateArchitectureDocs success paths", () => {
     expect(result.architecture_docs_path).toBe(
       join(repoRoot, "docs", "generated", "ARCHITECTURE.generated.md")
     );
+    expect(await readFile(result.architecture_docs_path, "utf8")).toContain(
+      "<!-- specforge:begin generated-architecture -->"
+    );
+  });
+
+  it("allows repo-relative docs_path names that start with two dots but stay inside the repository", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "specforge-architecture-docs-"));
+
+    const result = await runUpdateArchitectureDocs({
+      project_mode: "existing-repo",
+      repository_root: repoRoot,
+      repo_profile: buildRepoProfile(repoRoot),
+      architecture_summary: buildArchitectureSummary(repoRoot),
+      docs_path: "..docs/ARCHITECTURE.md"
+    });
+
+    expect(result.architecture_docs_path).toBe(join(repoRoot, "..docs", "ARCHITECTURE.md"));
     expect(await readFile(result.architecture_docs_path, "utf8")).toContain(
       "<!-- specforge:begin generated-architecture -->"
     );

@@ -192,7 +192,12 @@ function resolveArchitectureDocsPath(repositoryRoot: string, docsPath?: string):
         : resolve(repositoryRoot, docsPath);
 
   const relativePath = relative(repositoryRoot, resolvedDocsPath);
-  if (relativePath === ".." || relativePath.startsWith("..") || isAbsolute(relativePath)) {
+  const isParentTraversal =
+    relativePath === ".." ||
+    relativePath.startsWith("../") ||
+    relativePath.startsWith("..\\") ||
+    isAbsolute(relativePath);
+  if (isParentTraversal) {
     throw new UpdateArchitectureDocsError(
       "invalid_docs_path",
       "docs_path must stay within repository_root."
@@ -436,8 +441,7 @@ async function writeArchitectureSummaryMarkdown(path: string, markdown: string):
 async function writeArchitectureDocs(path: string, markdown: string): Promise<void> {
   try {
     await mkdir(dirname(path), { recursive: true });
-    const normalizedMarkdown = `${markdown.replace(/\n*$/u, "")}\n`;
-    await writeFile(path, normalizedMarkdown, "utf8");
+    await writeFile(path, markdown, "utf8");
   } catch (error) {
     throw new UpdateArchitectureDocsError(
       "docs_write_failed",

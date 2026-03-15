@@ -46,7 +46,7 @@ The engine remains the source of truth for workflow state, gates, and artifact p
 
 ## Generated Repository Snapshot
 
-For owned repositories, `specforge inspect --write-architecture-docs` can refresh a managed
+For repositories where you want SpecForge to maintain an architecture snapshot, `specforge inspect --write-architecture-docs` can refresh a managed
 architecture snapshot in `docs/ARCHITECTURE.md` without rescanning beyond the bounded inspect flow.
 
 That generated section is derived from:
