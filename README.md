@@ -6,8 +6,8 @@ SpecForge is a specification-driven engineering orchestration CLI that converts 
 
 SpecForge treats software engineering like a deterministic build system: ideas become specs, specs become tasks, and tasks become tested, reviewable changes.
 
-| [Contributing](./CONTRIBUTING.md) | [License](./LICENSE) | [Development Tracker](https://github.com/iKwesi/SpecForge/issues/54) | [Project Board](https://github.com/users/iKwesi/projects/1) |
-| --- | --- | --- | --- |
+| [Contributing](./CONTRIBUTING.md) | [Roadmap](./ROADMAP.md) | [License](./LICENSE) | [Development Tracker](https://github.com/iKwesi/SpecForge/issues/54) | [Project Board](https://github.com/users/iKwesi/projects/1) |
+| --- | --- | --- | --- | --- |
 
 ## Status
 
@@ -58,6 +58,12 @@ Run `pnpm demo:golden` to execute the canonical existing-repo walkthrough and ge
 ## Policy Configuration
 
 Policy contract details and the canonical example file are documented in [docs/POLICY_CONFIG.md](./docs/POLICY_CONFIG.md).
+
+## Roadmap
+
+The contributor-facing phase roadmap lives in [ROADMAP.md](./ROADMAP.md). Use it with the
+[Development Tracker](https://github.com/iKwesi/SpecForge/issues/54) and the
+[Project Board](https://github.com/users/iKwesi/projects/1) when choosing the next issue.
 
 ## Contributing
 
