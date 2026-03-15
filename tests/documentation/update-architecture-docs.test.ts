@@ -143,6 +143,24 @@ describe("updateArchitectureDocs failure paths", () => {
       })
     );
   });
+
+  it("rejects docs_path values that resolve outside repository_root", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "specforge-architecture-docs-"));
+
+    await expect(
+      runUpdateArchitectureDocs({
+        project_mode: "existing-repo",
+        repository_root: repoRoot,
+        repo_profile: buildRepoProfile(repoRoot),
+        architecture_summary: buildArchitectureSummary(repoRoot),
+        docs_path: "../outside/ARCHITECTURE.md"
+      })
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<UpdateArchitectureDocsError>>({
+        code: "invalid_docs_path"
+      })
+    );
+  });
 });
 
 describe("updateArchitectureDocs success paths", () => {
@@ -252,6 +270,25 @@ describe("updateArchitectureDocs success paths", () => {
 
     expect(secondContent).toBe(firstContent);
     expect(second.architecture_docs_content).toBe(first.architecture_docs_content);
+  });
+
+  it("resolves relative docs_path values from repository_root instead of process cwd", async () => {
+    const repoRoot = await mkdtemp(join(tmpdir(), "specforge-architecture-docs-"));
+
+    const result = await runUpdateArchitectureDocs({
+      project_mode: "existing-repo",
+      repository_root: repoRoot,
+      repo_profile: buildRepoProfile(repoRoot),
+      architecture_summary: buildArchitectureSummary(repoRoot),
+      docs_path: "docs/generated/ARCHITECTURE.generated.md"
+    });
+
+    expect(result.architecture_docs_path).toBe(
+      join(repoRoot, "docs", "generated", "ARCHITECTURE.generated.md")
+    );
+    expect(await readFile(result.architecture_docs_path, "utf8")).toContain(
+      "<!-- specforge:begin generated-architecture -->"
+    );
   });
 
   it("supports dry-run mode without mutating the repository", async () => {

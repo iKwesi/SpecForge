@@ -68,11 +68,12 @@ export interface RunInspectInput {
 }
 
 /**
- * Produce repository inspection artifacts without modifying application code.
+ * Produce bounded repository inspection outputs without modifying application code.
  *
- * This orchestration layer intentionally composes the existing bounded repository
- * profiling and architecture mapping operations. The only files written are the
- * published artifacts under .specforge for the inspected repository.
+ * By default this orchestration layer writes only the published inspect artifacts
+ * under `.specforge` for the inspected repository. When `write_architecture_docs`
+ * is enabled, it can also refresh maintained architecture markdown such as
+ * `docs/ARCHITECTURE.md` or a caller-provided `docs_path`.
  */
 export async function runInspect(input: RunInspectInput = {}): Promise<InspectResult> {
   const repositoryRoot = input.repository_root ?? process.cwd();

@@ -1,5 +1,5 @@
 import { lstat, mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 
 import { createDryRunReport, type DryRunReport } from "../contracts/dryRun.js";
 import type { ProjectMode } from "../contracts/domain.js";
@@ -16,6 +16,7 @@ const ARCHITECTURE_SUMMARY_MARKDOWN_RELATIVE_PATH = join(".specforge", "architec
 export type UpdateArchitectureDocsErrorCode =
   | "invalid_mode"
   | "repository_not_found"
+  | "invalid_docs_path"
   | "insufficient_repo_profile"
   | "insufficient_architecture_summary"
   | "artifact_mismatch"
@@ -64,7 +65,7 @@ export const UPDATE_ARCHITECTURE_DOCS_OPERATION_CONTRACT: OperationContract<
   inputs_schema: {} as UpdateArchitectureDocsInput,
   outputs_schema: {} as UpdateArchitectureDocsResult,
   side_effects: [
-    "writes .specforge/architecture_summary.md",
+    "writes .specforge/architecture_summary.md (under artifact_dir when provided)",
     "writes docs/ARCHITECTURE.md (or docs_path when provided)"
   ],
   invariants: [
@@ -78,6 +79,7 @@ export const UPDATE_ARCHITECTURE_DOCS_OPERATION_CONTRACT: OperationContract<
   failure_modes: [
     "invalid_mode",
     "repository_not_found",
+    "invalid_docs_path",
     "insufficient_repo_profile",
     "insufficient_architecture_summary",
     "artifact_mismatch",
@@ -116,8 +118,10 @@ export async function runUpdateArchitectureDocs(
     artifactDir,
     ARCHITECTURE_SUMMARY_MARKDOWN_RELATIVE_PATH
   );
-  const architectureDocsPath =
-    input.docs_path ?? join(input.repository_root, ARCHITECTURE_DOCS_DEFAULT_RELATIVE_PATH);
+  const architectureDocsPath = resolveArchitectureDocsPath(
+    input.repository_root,
+    input.docs_path
+  );
   const architectureSummaryMarkdown = renderArchitectureSummaryMarkdown(repoProfile, architectureSummary);
   const currentDocsContent = await readExistingDocs(architectureDocsPath);
   const architectureDocsContent = renderArchitectureDocsContent(
@@ -177,6 +181,25 @@ async function ensureRepositoryRootExists(repositoryRoot: string): Promise<void>
       error
     );
   }
+}
+
+function resolveArchitectureDocsPath(repositoryRoot: string, docsPath?: string): string {
+  const resolvedDocsPath =
+    docsPath === undefined
+      ? join(repositoryRoot, ARCHITECTURE_DOCS_DEFAULT_RELATIVE_PATH)
+      : isAbsolute(docsPath)
+        ? resolve(docsPath)
+        : resolve(repositoryRoot, docsPath);
+
+  const relativePath = relative(repositoryRoot, resolvedDocsPath);
+  if (relativePath === ".." || relativePath.startsWith("..") || isAbsolute(relativePath)) {
+    throw new UpdateArchitectureDocsError(
+      "invalid_docs_path",
+      "docs_path must stay within repository_root."
+    );
+  }
+
+  return resolvedDocsPath;
 }
 
 function ensureSupportedMode(projectMode: ProjectMode): asserts projectMode is "existing-repo" {
