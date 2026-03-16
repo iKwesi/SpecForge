@@ -236,4 +236,23 @@ describe("gitlab provider getPullRequestStatus", () => {
       })
     );
   });
+
+  it("fails early when a non-url gitlab pull_request ref is not a positive merge request number", async () => {
+    const provider = createGitLabProvider({
+      exec: async () => {
+        throw new Error("should not reach glab");
+      }
+    });
+
+    await expect(
+      provider.getPullRequestStatus({
+        repository: "gitlab-org/cli",
+        pull_request: "feat/task-1"
+      })
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<GitLabProviderError>>({
+        code: "invalid_pull_request"
+      })
+    );
+  });
 });

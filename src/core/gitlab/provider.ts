@@ -100,7 +100,7 @@ export function createGitLabProvider(input: {
     ): Promise<IssueTrackerPullRequestStatus> {
       const parsedMergeRequestUrl = parseGitLabMergeRequestUrl(input.pull_request);
       const repository = input.repository ?? parsedMergeRequestUrl?.repository;
-      const mergeRequestIid = parsedMergeRequestUrl?.iid ?? input.pull_request;
+      const mergeRequestIid = normalizeMergeRequestIid(parsedMergeRequestUrl?.iid ?? input.pull_request);
 
       if (!repository) {
         throw new GitLabProviderError(
@@ -110,7 +110,6 @@ export function createGitLabProvider(input: {
       }
 
       ensureGitLabProjectPath(repository);
-      ensureNonEmpty(mergeRequestIid, "pull_request");
 
       const viewed = await runGlabCommand(exec, [
         "api",
@@ -380,6 +379,18 @@ function normalizeOptionalBody(value: unknown): string | undefined {
   }
 
   return value.trim().length > 0 ? value : undefined;
+}
+
+function normalizeMergeRequestIid(value: string): string {
+  const trimmed = value.trim();
+  if (!/^[1-9]\d*$/.test(trimmed)) {
+    throw new GitLabProviderError(
+      "invalid_pull_request",
+      "pull_request must be a positive merge request number or a GitLab merge request URL."
+    );
+  }
+
+  return trimmed;
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {

@@ -44,15 +44,6 @@ export function inferIssueTrackerProviderName(
     return "gitlab";
   }
 
-  try {
-    const url = new URL(pullRequestRef);
-    if (url.hostname === "github.com" && url.pathname.includes("/pull/")) {
-      return "github";
-    }
-  } catch {
-    return "github";
-  }
-
   return "github";
 }
 

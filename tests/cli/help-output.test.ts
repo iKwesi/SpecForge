@@ -17,10 +17,13 @@ describe("specforge help output", () => {
     const program = createProgram();
     const inspectHelp = program.commands.find((command) => command.name() === "inspect")?.helpInformation();
     const explainHelp = program.commands.find((command) => command.name() === "explain")?.helpInformation();
+    const statusHelp = program.commands.find((command) => command.name() === "status")?.helpInformation();
 
     expect(inspectHelp).toContain("in a .specforge subdirectory");
     expect(inspectHelp).toContain("--repository-root . --artifact-dir .");
     expect(explainHelp).toContain("artifact lineage");
     expect(explainHelp).toContain("Example: specforge explain --artifact-file .specforge/task-results/TASK-1.json");
+    expect(statusHelp).toContain("GitHub: pull request number, URL, or branch");
+    expect(statusHelp).toContain("merge request number or URL");
   });
 });
