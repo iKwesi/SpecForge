@@ -285,12 +285,10 @@ function renderArchitectureSummaryMarkdown(
   }
 
   const diagramsSection = renderArchitectureDiagramsMarkdown(repoProfile, architectureSummary);
-  if (diagramsSection.trim().length > 0) {
-    if (parts.length > 0) {
-      parts.push("");
-    }
-    parts.push(diagramsSection);
+  if (parts.length > 0) {
+    parts.push("");
   }
+  parts.push(diagramsSection);
 
   const evidenceSection = renderEvidenceSection(repoProfile, architectureSummary);
   if (evidenceSection.trim().length > 0) {
