@@ -57,12 +57,14 @@ export async function runStatus(input: RunStatusInput): Promise<StatusResult> {
 }
 
 export function formatStatusReport(result: StatusResult): string {
+  const requestLabel =
+    result.pull_request.request_kind === "merge_request" ? "Merge Request" : "Pull Request";
   const lines = [
     "SpecForge Status",
     "",
     `Provider: ${result.pull_request.provider}`,
     `Request Kind: ${result.pull_request.request_kind}`,
-    `Pull Request: #${result.pull_request.number}`,
+    `${requestLabel}: #${result.pull_request.number}`,
     `URL: ${result.pull_request.url}`,
     `Title: ${result.pull_request.title}`,
     `State: ${result.pull_request.state}`,

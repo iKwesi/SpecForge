@@ -206,4 +206,34 @@ describe("gitlab provider getPullRequestStatus", () => {
       }
     ]);
   });
+
+  it("rejects non-positive or non-integer merge request iids from GitLab output", async () => {
+    const provider = createGitLabProvider({
+      exec: async () => ({
+        stdout: JSON.stringify({
+          iid: 0,
+          web_url: "https://gitlab.com/gitlab-org/cli/-/merge_requests/42",
+          title: "feat: implement task flow",
+          state: "opened",
+          draft: false,
+          detailed_merge_status: "mergeable",
+          source_branch: "feat/task-1",
+          target_branch: "main",
+          description: "",
+          head_pipeline: {}
+        }),
+        stderr: ""
+      })
+    });
+
+    await expect(
+      provider.getPullRequestStatus({
+        pull_request: "https://gitlab.com/gitlab-org/cli/-/merge_requests/42"
+      })
+    ).rejects.toEqual(
+      expect.objectContaining<Partial<GitLabProviderError>>({
+        code: "parse_failed"
+      })
+    );
+  });
 });

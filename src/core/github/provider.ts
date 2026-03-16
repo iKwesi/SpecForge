@@ -1,5 +1,6 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { deriveOverallStatus } from "../trackers/contracts.js";
 
 const execFileAsync = promisify(execFile);
 const PR_VIEW_FIELDS = [
@@ -476,28 +477,6 @@ function normalizeStatusContextConclusion(value: string | undefined): GitHubStat
     default:
       return "unknown";
   }
-}
-
-function deriveOverallStatus(statusChecks: GitHubStatusCheck[]): GitHubOverallStatus {
-  if (statusChecks.length === 0) {
-    return "no_checks";
-  }
-
-  if (
-    statusChecks.some((check) =>
-      ["failure", "timed_out", "cancelled", "action_required", "unknown"].includes(
-        check.conclusion
-      )
-    )
-  ) {
-    return "failure";
-  }
-
-  if (statusChecks.some((check) => check.conclusion === "pending" || check.status !== "completed")) {
-    return "pending";
-  }
-
-  return "success";
 }
 
 function isPullRequestUrl(value: string): boolean {

@@ -225,7 +225,7 @@ function readOptionalBoolean(value: unknown): boolean | undefined {
 }
 
 function readNumber(value: unknown, field: string): number {
-  if (typeof value !== "number" || !Number.isFinite(value)) {
+  if (typeof value !== "number" || !Number.isInteger(value) || value <= 0) {
     throw new GitLabProviderError("parse_failed", `GitLab CLI returned invalid ${field}.`);
   }
 

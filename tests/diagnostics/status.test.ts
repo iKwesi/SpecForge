@@ -214,6 +214,7 @@ describe("runStatus", () => {
     const report = formatStatusReport(result);
     expect(report).toContain("Provider: gitlab");
     expect(report).toContain("Request Kind: merge_request");
+    expect(report).toContain("Merge Request: #42");
     expect(report).toContain("- head_pipeline [pipeline] completed/success");
   });
 });

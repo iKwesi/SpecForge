@@ -197,7 +197,7 @@ The command reads artifact inputs and optional policy/schedule context, then pri
   program
     .command("status")
     .description("Report issue-tracker review request state and CI outcomes. Example: specforge status --repo iKwesi/SpecForge --pr 123")
-    .requiredOption("--pr <ref>", "Pull request or merge request number, URL, or branch to inspect")
+    .requiredOption("--pr <ref>", "Pull request or merge request number or URL to inspect")
     .option(
       "--repo <path>",
       "Issue tracker repository/project path when --pr is not a review request URL"
