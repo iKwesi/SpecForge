@@ -177,6 +177,8 @@ See [docs/GOLDEN_DEMO.md](./docs/GOLDEN_DEMO.md) for the full walkthrough.
 
 ## Commands
 
+In the table below, `specforge ...` refers to the built CLI command. From a source checkout, run the same commands as `node dist/cli.js ...` after `pnpm build`, or use `pnpm exec tsx src/cli.ts ...` during development.
+
 | Command | Purpose | Notes |
 | --- | --- | --- |
 | `specforge doctor` | Validate environment, repository readiness, and policy shape | Good first command on any machine |

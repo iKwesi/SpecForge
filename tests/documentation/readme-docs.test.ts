@@ -13,6 +13,9 @@ describe("readme docs", () => {
     expect(readme).toContain("node dist/cli.js doctor");
     expect(readme).toContain("node dist/cli.js inspect --repository-root . --artifact-dir .");
     expect(readme).toContain("node dist/cli.js status --provider gitlab --repo gitlab-org/cli --pr 42");
+    expect(readme).toContain("`specforge ...` refers to the built CLI command");
+    expect(readme).toContain("node dist/cli.js ...");
+    expect(readme).toContain("pnpm exec tsx src/cli.ts ...");
     expect(readme).toContain("pnpm demo:golden");
     expect(readme).toContain("docs/GOLDEN_DEMO.md");
     expect(readme).toContain("docs/POLICY_CONFIG.md");
