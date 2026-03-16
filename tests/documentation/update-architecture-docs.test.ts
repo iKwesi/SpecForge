@@ -207,8 +207,12 @@ describe("updateArchitectureDocs success paths", () => {
     expect(result.architecture_summary_markdown).toContain("## Subsystem Relationship Diagram");
     expect(result.architecture_summary_markdown).toContain("operation.profileRepository");
     expect(result.architecture_summary_markdown).toContain("src/api/routes.ts");
-    expect(result.architecture_summary_markdown).toContain("src_cli --> src_api");
-    expect(result.architecture_summary_markdown).toContain("tests_api -.-> src_api");
+    expect(result.architecture_summary_markdown).toMatch(
+      /src_cli__[a-z0-9]{6} --> src_api__[a-z0-9]{6}/
+    );
+    expect(result.architecture_summary_markdown).toMatch(
+      /tests_api__[a-z0-9]{6} -.-> src_api__[a-z0-9]{6}/
+    );
 
     const docsContent = await readFile(result.architecture_docs_path, "utf8");
     expect(docsContent).toContain("Manual overview.");

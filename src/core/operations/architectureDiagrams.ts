@@ -166,13 +166,46 @@ function renderRelationshipEdge(relationship: ArchitectureRelationship): string 
   return `  ${sourceId} --> ${targetId}`;
 }
 
+function stableMermaidIdHash(value: string): string {
+  let hash = 5381;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 33) ^ value.charCodeAt(index);
+  }
+
+  return (hash >>> 0).toString(36);
+}
+
 function toMermaidNodeId(value: string): string {
   const normalized = value.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
-  return normalized.length === 0 ? "node" : /^[0-9]/.test(normalized) ? `n_${normalized}` : normalized;
+  const base =
+    normalized.length === 0 ? "node" : /^[0-9]/.test(normalized) ? `n_${normalized}` : normalized;
+  const hashSuffix = stableMermaidIdHash(value).slice(0, 6);
+
+  return `${base}__${hashSuffix}`;
+}
+
+function escapeHtmlForMermaidLabel(value: string): string {
+  return value.replace(/[&<>"]/g, (character) => {
+    switch (character) {
+      case "&":
+        return "&amp;";
+      case "<":
+        return "&lt;";
+      case ">":
+        return "&gt;";
+      case "\"":
+        return "&quot;";
+      default:
+        return character;
+    }
+  });
 }
 
 function toMermaidLabel(subsystem: ArchitectureSubsystem): string {
-  return `${subsystem.id}<br/>${subsystem.inferred_responsibility}`.replace(/"/g, "&quot;");
+  const safeId = escapeHtmlForMermaidLabel(subsystem.id);
+  const safeResponsibility = escapeHtmlForMermaidLabel(subsystem.inferred_responsibility);
+
+  return `${safeId}<br/>${safeResponsibility}`;
 }
 
 function sortUniqueStrings(values: string[]): string[] {

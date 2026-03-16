@@ -14,17 +14,49 @@ describe("architecture diagram generation", () => {
     expect(markdown).toContain("## System Context Diagram");
     expect(markdown).toContain("```mermaid");
     expect(markdown).toContain('repository["Repository"]');
-    expect(markdown).toContain('src_api["src/api');
-    expect(markdown).toContain("repository --> src_api");
-    expect(markdown).toContain("repository --> src_cli");
+    expect(markdown).toMatch(/src_api__[a-z0-9]{6}\["src\/api/);
+    expect(markdown).toMatch(/repository --> src_api__[a-z0-9]{6}/);
+    expect(markdown).toMatch(/repository --> src_cli__[a-z0-9]{6}/);
     expect(markdown).toContain("## Subsystem Relationship Diagram");
-    expect(markdown).toContain("src_cli --> src_api");
-    expect(markdown).toContain("tests_api -.-> src_api");
+    expect(markdown).toMatch(/src_cli__[a-z0-9]{6} --> src_api__[a-z0-9]{6}/);
+    expect(markdown).toMatch(/tests_api__[a-z0-9]{6} -.-> src_api__[a-z0-9]{6}/);
     expect(markdown).toContain("### Relationship Evidence");
     expect(markdown).toContain("src/cli -> src/api");
     expect(markdown).toContain("tests/api -> src/api");
     expect(markdown).toContain("src/api/routes.ts");
     expect(markdown).toContain("tests/api/routes.test.ts");
+  });
+
+  it("escapes mermaid labels and keeps node ids collision-safe", () => {
+    const repoProfile = buildRepoProfile("/workspace/specforge");
+    const architectureSummary = buildArchitectureSummary("/workspace/specforge");
+    architectureSummary.subsystems = [
+      {
+        id: 'src/api<core>',
+        label: 'src/api<core>',
+        inferred_responsibility: 'API & "backend" <surface>',
+        file_count: 1,
+        evidence_refs: ["src/api/index.ts"],
+        uncertainty: "medium"
+      },
+      {
+        id: "src_api<core>",
+        label: "src_api<core>",
+        inferred_responsibility: "General subsystem",
+        file_count: 1,
+        evidence_refs: ["src_api/index.ts"],
+        uncertainty: "medium"
+      }
+    ];
+
+    const markdown = renderArchitectureDiagramsMarkdown(repoProfile, architectureSummary);
+    const nodeIds = new Set(
+      [...markdown.matchAll(/^\s{2}(src_api_core__[a-z0-9]{6})\[/gm)].map(([, nodeId]) => nodeId)
+    );
+
+    expect(nodeIds.size).toBe(2);
+    expect(markdown).toContain("src/api&lt;core&gt;<br/>API &amp; &quot;backend&quot; &lt;surface&gt;");
+    expect(markdown).not.toContain('src/api<core><br/>API & "backend" <surface>');
   });
 });
 
