@@ -100,25 +100,24 @@ export async function emitStatusNotification(
     pull_request: input.pull_request
   };
 
-  const deliveries: StatusNotificationDelivery[] = [];
-  for (const notifier of input.notifiers) {
-    try {
-      await notifier.notify(event);
-      deliveries.push({
-        adapter_id: notifier.adapter_id,
-        delivery_status: "delivered",
-        message: "Status event delivered."
-      });
-    } catch (error) {
-      deliveries.push({
-        adapter_id: notifier.adapter_id,
-        delivery_status: "failed",
-        message: error instanceof Error ? error.message : String(error)
-      });
-    }
-  }
-
-  return deliveries;
+  return Promise.all(
+    input.notifiers.map(async (notifier) => {
+      try {
+        await notifier.notify(event);
+        return {
+          adapter_id: notifier.adapter_id,
+          delivery_status: "delivered",
+          message: "Status event delivered."
+        } as StatusNotificationDelivery;
+      } catch (error) {
+        return {
+          adapter_id: notifier.adapter_id,
+          delivery_status: "failed",
+          message: error instanceof Error ? error.message : String(error)
+        } as StatusNotificationDelivery;
+      }
+    })
+  );
 }
 
 function normalizeWebhookUrl(value: string): string {
@@ -151,11 +150,12 @@ function normalizeWebhookUrl(value: string): string {
   return url.toString();
 }
 
-function normalizeAdapterId(value: string): string {
-  if (value.trim().length === 0) {
+function normalizeAdapterId(value: unknown): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
     throw new StatusNotifierError(
       "invalid_notifier",
-      "adapter_id must be a non-empty string."
+      "adapter_id must be a non-empty string.",
+      { adapter_id: value }
     );
   }
 

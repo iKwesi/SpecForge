@@ -118,6 +118,68 @@ describe("status notifier adapters", () => {
     ]);
     expect(calls).toEqual(["https://hooks.example.test/specforge"]);
   });
+
+  it("rejects non-string adapter ids with a typed error", () => {
+    expect(() =>
+      createWebhookStatusNotifier({
+        webhook_url: "https://hooks.example.test/specforge",
+        adapter_id: 42 as never
+      })
+    ).toThrowError(
+      expect.objectContaining<Partial<StatusNotifierError>>({
+        code: "invalid_notifier",
+        details: { adapter_id: 42 }
+      })
+    );
+  });
+
+  it("delivers notifications concurrently while preserving result order", async () => {
+    const sequence: string[] = [];
+    let releaseSlowNotifier: (() => void) | undefined;
+    const slowNotifierReady = new Promise<void>((resolve) => {
+      releaseSlowNotifier = resolve;
+    });
+
+    const deliveriesPromise = emitStatusNotification({
+      pull_request: buildPullRequestStatus(),
+      notifiers: [
+        {
+          adapter_id: "slow-webhook",
+          async notify() {
+            sequence.push("slow-start");
+            await slowNotifierReady;
+            sequence.push("slow-end");
+          }
+        },
+        {
+          adapter_id: "fast-webhook",
+          async notify() {
+            sequence.push("fast-start");
+          }
+        }
+      ]
+    });
+
+    await Promise.resolve();
+    expect(sequence).toEqual(["slow-start", "fast-start"]);
+
+    releaseSlowNotifier?.();
+    const deliveries = await deliveriesPromise;
+
+    expect(deliveries).toEqual([
+      {
+        adapter_id: "slow-webhook",
+        delivery_status: "delivered",
+        message: "Status event delivered."
+      },
+      {
+        adapter_id: "fast-webhook",
+        delivery_status: "delivered",
+        message: "Status event delivered."
+      }
+    ]);
+    expect(sequence).toEqual(["slow-start", "fast-start", "slow-end"]);
+  });
 });
 
 function buildPullRequestStatus(): GitHubPullRequestStatus {
