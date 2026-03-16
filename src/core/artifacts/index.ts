@@ -38,6 +38,10 @@ export class ArtifactIndexError extends Error {
   }
 }
 
+/**
+ * Create an empty artifact-version index. The on-disk file is optional, so the
+ * empty index is the bootstrap state for new repositories and missing files.
+ */
 export function createArtifactIndex(): ArtifactIndex {
   return {
     schema_version: "v1",
@@ -45,6 +49,10 @@ export function createArtifactIndex(): ArtifactIndex {
   };
 }
 
+/**
+ * Register one artifact version in canonical order. Re-registering the same
+ * version is a no-op so writers can safely call this after idempotent publishes.
+ */
 export function registerArtifactVersion(
   index: ArtifactIndex,
   input: RegisterArtifactVersionInput
@@ -70,6 +78,10 @@ export function registerArtifactVersion(
   return buildIndexFromMap(byArtifact);
 }
 
+/**
+ * Resolve either the latest known version for an artifact or confirm that a
+ * requested version still exists in the index.
+ */
 export function resolveArtifactVersion(
   index: ArtifactIndex,
   input: ResolveArtifactVersionInput
@@ -88,6 +100,10 @@ export function resolveArtifactVersion(
   return entry.versions.includes(input.requested_version) ? input.requested_version : undefined;
 }
 
+/**
+ * Materialize the latest-version lookup used by validation and drift checks so
+ * callers do not have to traverse index entries repeatedly.
+ */
 export function buildArtifactVersionIndex(index: ArtifactIndex): Record<string, ArtifactVersion> {
   const normalized = normalizeArtifactIndex(index);
   const lookup: Record<string, ArtifactVersion> = {};
@@ -99,6 +115,10 @@ export function buildArtifactVersionIndex(index: ArtifactIndex): Record<string, 
   return lookup;
 }
 
+/**
+ * Read and validate the persisted artifact index. A missing file is treated as
+ * an empty index so new repositories do not need an eager bootstrap write.
+ */
 export async function readArtifactIndex(filePath: string): Promise<ArtifactIndex> {
   try {
     const raw = await readFile(filePath, "utf8");
@@ -124,6 +144,10 @@ export async function readArtifactIndex(filePath: string): Promise<ArtifactIndex
   }
 }
 
+/**
+ * Persist a normalized index to disk. The write path always revalidates first
+ * so callers cannot accidentally serialize a partially-invalid in-memory shape.
+ */
 export async function writeArtifactIndex(
   filePath: string,
   index: ArtifactIndex
@@ -184,6 +208,8 @@ function normalizeArtifactIndex(index: unknown): ArtifactIndex {
 
     const latest = ensureArtifactVersion(rawEntry.latest_version);
     const expectedLatest = canonicalVersions[canonicalVersions.length - 1];
+    // latest_version is stored redundantly for quick lookup, so we validate it
+    // against the canonical version list instead of trusting the serialized copy.
     if (latest !== expectedLatest) {
       throw new ArtifactIndexError(
         "invalid_index",
