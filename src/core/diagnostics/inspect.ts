@@ -1,6 +1,11 @@
 import { join } from "node:path";
 
 import { mergeDryRunReports, type DryRunReport } from "../contracts/dryRun.js";
+import {
+  RiskAnalysisError,
+  analyzeRepositoryRisk,
+  type RepositoryRiskAnalysis
+} from "./riskAnalysis.js";
 import type { ArchitectureSummaryArtifact } from "../operations/mapArchitectureFromRepo.js";
 import {
   MapArchitectureFromRepoError,
@@ -26,7 +31,11 @@ const STANDARD_MAX_FILES = 200;
 const DEEP_MAX_FILES = 1000;
 
 export type InspectScanMode = "standard" | "deep";
-export type InspectErrorCode = "profile_failed" | "architecture_failed" | "architecture_docs_failed";
+export type InspectErrorCode =
+  | "profile_failed"
+  | "architecture_failed"
+  | "risk_analysis_failed"
+  | "architecture_docs_failed";
 
 export class InspectError extends Error {
   readonly code: InspectErrorCode;
@@ -49,6 +58,7 @@ export interface InspectResult {
   architecture_docs_path?: string;
   repo_profile: RepoProfileArtifact;
   architecture_summary: ArchitectureSummaryArtifact;
+  risk_analysis: RepositoryRiskAnalysis;
   dry_run?: DryRunReport;
 }
 
@@ -133,6 +143,24 @@ export async function runInspect(input: RunInspectInput = {}): Promise<InspectRe
     throw error;
   }
 
+  let riskAnalysis: RepositoryRiskAnalysis;
+  try {
+    riskAnalysis = analyzeRepositoryRisk({
+      repo_profile: repoProfile,
+      architecture_summary: architectureSummary
+    });
+  } catch (error) {
+    if (error instanceof RiskAnalysisError) {
+      throw new InspectError(
+        "risk_analysis_failed",
+        `Risk analysis failed: ${error.message}`,
+        error
+      );
+    }
+
+    throw error;
+  }
+
   let architectureSummaryMarkdownPath: string | undefined;
   let architectureDocsPath: string | undefined;
   if (input.write_architecture_docs) {
@@ -173,6 +201,7 @@ export async function runInspect(input: RunInspectInput = {}): Promise<InspectRe
     ...(architectureDocsPath ? { architecture_docs_path: architectureDocsPath } : {}),
     repo_profile: repoProfile,
     architecture_summary: architectureSummary,
+    risk_analysis: riskAnalysis,
     ...(dryRun ? { dry_run: dryRun } : {})
   };
 }
@@ -220,6 +249,19 @@ export function formatInspectReport(result: InspectResult): string {
     lines.push(
       `- ${subsystem.id} (${subsystem.file_count} files, ${subsystem.uncertainty} uncertainty)`
     );
+  }
+
+  lines.push("", "Risk Hotspots");
+  if (result.risk_analysis.hotspots.length === 0) {
+    lines.push("- none");
+  } else {
+    for (const hotspot of result.risk_analysis.hotspots) {
+      lines.push(`- ${hotspot.subsystem_id} (${hotspot.level} risk, score ${hotspot.score})`);
+      for (const providerScore of hotspot.provider_scores) {
+        lines.push(`  - ${providerScore.provider_id}: ${providerScore.score}`);
+        lines.push(`    ${providerScore.rationale}`);
+      }
+    }
   }
 
   return `${lines.join("\n")}\n`;

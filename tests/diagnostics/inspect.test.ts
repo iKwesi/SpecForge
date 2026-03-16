@@ -48,7 +48,9 @@ describe("runInspect success paths", () => {
       { path: "tsconfig.json", content: "{\"compilerOptions\":{}}" },
       { path: "src/api/routes.ts", content: "export const routes = [];" },
       { path: "src/api/service.ts", content: "export const service = {};" },
+      { path: "src/cli/format.ts", content: "export const format = () => {};" },
       { path: "src/cli/main.ts", content: "export const main = () => {};" },
+      { path: "tests/api/routes.test.ts", content: "export const routeTests = [];" },
       { path: "README.md", content: "# Demo\n" }
     ]);
 
@@ -70,7 +72,12 @@ describe("runInspect success paths", () => {
     );
     expect(result.architecture_summary.subsystems.map((subsystem) => subsystem.id)).toEqual([
       "src/api",
-      "src/cli"
+      "src/cli",
+      "tests/api"
+    ]);
+    expect(result.risk_analysis.hotspots.map((hotspot) => hotspot.subsystem_id)).toEqual([
+      "src/cli",
+      "src/api"
     ]);
 
     expect(await readFile(join(repoRoot, "README.md"), "utf8")).toBe(originalReadme);
@@ -79,6 +86,7 @@ describe("runInspect success paths", () => {
       "package.json",
       "README.md",
       "src",
+      "tests",
       "tsconfig.json"
     ]);
 
@@ -86,7 +94,9 @@ describe("runInspect success paths", () => {
     expect(report).toContain("SpecForge Inspect");
     expect(report).toContain("repo_profile@v1");
     expect(report).toContain("architecture_summary@v1");
-    expect(report).toContain("src/api");
+    expect(report).toContain("Risk Hotspots");
+    expect(report).toContain("src/cli (medium risk, score 53)");
+    expect(report).toContain("coverage: 85");
   });
 
   it("supports bounded deep inspection by increasing the scan budget", async () => {

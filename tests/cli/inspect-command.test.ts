@@ -3,6 +3,12 @@ import { describe, expect, it } from "vitest";
 import { runCli } from "../../src/cli.js";
 import type { InspectResult } from "../../src/core/diagnostics/inspect.js";
 import type { DryRunReport } from "../../src/core/contracts/dryRun.js";
+import type { RepositoryRiskAnalysis } from "../../src/core/diagnostics/riskAnalysis.js";
+
+const EMPTY_RISK_ANALYSIS: RepositoryRiskAnalysis = {
+  providers: [],
+  hotspots: []
+};
 
 function buildInspectResult(overrides: Partial<InspectResult> = {}): InspectResult {
   return {
@@ -60,6 +66,7 @@ function buildInspectResult(overrides: Partial<InspectResult> = {}): InspectResu
       ],
       summary_markdown: "# Architecture Summary"
     },
+    risk_analysis: EMPTY_RISK_ANALYSIS,
     ...overrides
   };
 }
