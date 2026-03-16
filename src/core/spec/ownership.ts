@@ -22,6 +22,9 @@ export interface ArtifactOwnershipContract {
   owner_operation: string;
 }
 
+// Each artifact kind has one canonical owning operation. Validation and
+// maintenance code relies on this registry instead of inferring broader write
+// permissions from file paths or command names.
 export const ARTIFACT_OWNERSHIP_REGISTRY: Record<ArtifactKind, ArtifactOwnershipContract> = {
   idea_brief: {
     artifact_kind: "idea_brief",
@@ -81,6 +84,11 @@ export const ARTIFACT_OWNERSHIP_REGISTRY: Record<ArtifactKind, ArtifactOwnership
   }
 };
 
+/**
+ * Infer the owned artifact kind from the published artifact_id naming scheme.
+ * The mapping is intentionally conservative: unknown ids stay unknown instead
+ * of being coerced into a nearby kind.
+ */
 export function inferArtifactKindFromId(artifactId: string): ArtifactKind | undefined {
   if (artifactId === "idea_brief") {
     return "idea_brief";
@@ -141,6 +149,10 @@ export function inferArtifactKindFromId(artifactId: string): ArtifactKind | unde
   return undefined;
 }
 
+/**
+ * Guard helper for validation paths that receive artifact-kind strings from
+ * serialized artifacts or inferred ids.
+ */
 export function isOwnedArtifactKind(kind: string): kind is ArtifactKind {
   return ARTIFACT_KINDS.includes(kind as ArtifactKind);
 }

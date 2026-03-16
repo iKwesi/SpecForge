@@ -22,10 +22,18 @@ interface CreateNextArtifactMetadataInput {
   createdTimestamp?: Date;
 }
 
+/**
+ * Hash published artifact content so metadata can prove exactly which bytes a
+ * given version was derived from.
+ */
 export function hashArtifactContent(content: string): string {
   return createHash("sha256").update(content).digest("hex");
 }
 
+/**
+ * Derive the next semantic artifact version in the simple v<number> lineage
+ * used throughout SpecForge.
+ */
 export function deriveArtifactVersion(previousVersion?: ArtifactVersion): ArtifactVersion {
   if (!previousVersion) {
     return "v1";
@@ -40,6 +48,10 @@ export function deriveArtifactVersion(previousVersion?: ArtifactVersion): Artifa
   return `v${next}`;
 }
 
+/**
+ * Create metadata for the first published version of an artifact. Initial
+ * versions intentionally have no parent_version pointer.
+ */
 export function createInitialArtifactMetadata(
   input: CreateInitialArtifactMetadataInput
 ): ArtifactMetadata {
@@ -53,6 +65,10 @@ export function createInitialArtifactMetadata(
   };
 }
 
+/**
+ * Create metadata for a derived artifact version while preserving explicit
+ * lineage back to the immediately previous published version.
+ */
 export function createNextArtifactMetadata(
   input: CreateNextArtifactMetadataInput
 ): ArtifactMetadata {

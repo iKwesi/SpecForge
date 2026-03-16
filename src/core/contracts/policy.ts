@@ -54,6 +54,10 @@ export interface PolicyValidationResult {
   issues: PolicyValidationIssue[];
 }
 
+/**
+ * Render a short, deterministic issue summary for CLI surfaces. The formatter
+ * truncates after a few issues so diagnostics stay readable on one screen.
+ */
 export function formatPolicyValidationIssues(issues: PolicyValidationIssue[]): string {
   const maxIssuesToShow = 3;
   const displayedIssues = issues
@@ -83,6 +87,10 @@ const DEFAULT_APPLICABLE_MODES: Partial<Record<ArtifactGate, ProjectMode[]>> = {
   merge_approval: ["greenfield", "existing-repo", "contribution", "feature-proposal"]
 };
 
+/**
+ * Return the conservative bootstrap policy SpecForge assumes when no explicit
+ * repo policy file overrides it.
+ */
 export function createDefaultPolicyConfig(): SpecForgePolicyConfig {
   return {
     coverage: {
@@ -104,6 +112,11 @@ export function isKnownGate(gate: string): gate is ArtifactGate {
   return ARTIFACT_GATES.includes(gate as ArtifactGate);
 }
 
+/**
+ * Validate one policy object against the current v1 contract. The validator is
+ * intentionally explicit instead of schema-library driven so reason codes and
+ * messages stay stable across CLI, CI, and tests.
+ */
 export function validatePolicyConfig(candidate: unknown): PolicyValidationResult {
   const issues: PolicyValidationIssue[] = [];
   if (!candidate || typeof candidate !== "object" || Array.isArray(candidate)) {
@@ -218,6 +231,8 @@ function validateEnabledGates(
   }
 
   const enabledByDefault = candidate as Record<string, unknown>;
+  // Report unknown keys first so typos are visible even when required known
+  // gate keys are also missing from the same object.
   for (const gate of Object.keys(enabledByDefault)) {
     if (!isKnownGate(gate)) {
       issues.push({
