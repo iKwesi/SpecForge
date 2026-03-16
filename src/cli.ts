@@ -197,7 +197,7 @@ The command reads artifact inputs and optional policy/schedule context, then pri
     .option("--repo <owner/repo>", "GitHub repository slug when --pr is not a pull request URL")
     .option(
       "--notify-webhook <url>",
-      "Emit the status event to a webhook without failing the status command if delivery fails",
+      "Emit the status event to a webhook; delivery failures are reported without failing the status command, but invalid webhook configuration is still an error",
       collectOptionValues,
       []
     )

@@ -108,13 +108,13 @@ export async function emitStatusNotification(
           adapter_id: notifier.adapter_id,
           delivery_status: "delivered",
           message: "Status event delivered."
-        } as StatusNotificationDelivery;
+        };
       } catch (error) {
         return {
           adapter_id: notifier.adapter_id,
           delivery_status: "failed",
           message: error instanceof Error ? error.message : String(error)
-        } as StatusNotificationDelivery;
+        };
       }
     })
   );

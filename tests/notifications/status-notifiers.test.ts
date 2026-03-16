@@ -82,6 +82,26 @@ describe("status notifier adapters", () => {
     ]);
   });
 
+  it("marks non-2xx webhook responses as failed deliveries", async () => {
+    const notifier = createWebhookStatusNotifier({
+      webhook_url: "https://hooks.example.test/specforge",
+      fetch: async () => new Response(null, { status: 500 })
+    });
+
+    const deliveries = await emitStatusNotification({
+      pull_request: buildPullRequestStatus(),
+      notifiers: [notifier]
+    });
+
+    expect(deliveries).toEqual([
+      {
+        adapter_id: "webhook",
+        delivery_status: "failed",
+        message: "Webhook delivery failed with HTTP 500."
+      }
+    ]);
+  });
+
   it("rejects invalid webhook urls with a typed error", () => {
     expect(() =>
       createWebhookStatusNotifier({
