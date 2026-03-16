@@ -15,6 +15,8 @@ import type {
   IssueTrackerPullRequestStatus
 } from "./contracts.js";
 
+const GITLAB_MERGE_REQUEST_PATH_PATTERN = /\/-\/merge_requests\/\d+(?:\/.*)?$/;
+
 export type {
   CreatePullRequestInput,
   GetPullRequestStatusInput,
@@ -96,7 +98,7 @@ export function adaptGitHubProvider(provider: GitHubProvider): IssueTrackerProvi
 function isGitLabMergeRequestUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    return /\/-\/merge_requests\/\d+\/?$/.test(url.pathname);
+    return GITLAB_MERGE_REQUEST_PATH_PATTERN.test(url.pathname);
   } catch {
     return false;
   }

@@ -207,6 +207,68 @@ describe("gitlab provider getPullRequestStatus", () => {
     ]);
   });
 
+  it("accepts GitLab merge request subpage URLs like diffs", async () => {
+    const calls: string[][] = [];
+    const provider = createGitLabProvider({
+      exec: async (args) => {
+        calls.push(args);
+        return {
+          stdout: JSON.stringify({
+            iid: 42,
+            web_url: "https://gitlab.example.com/platform/specforge/-/merge_requests/42",
+            title: "feat: implement task flow",
+            state: "opened",
+            draft: false,
+            detailed_merge_status: "mergeable",
+            source_branch: "feat/task-1",
+            target_branch: "main",
+            description: "",
+            head_pipeline: {
+              status: "success",
+              web_url: "https://gitlab.example.com/platform/specforge/-/pipelines/100"
+            }
+          }),
+          stderr: ""
+        };
+      }
+    });
+
+    const result = await provider.getPullRequestStatus({
+      pull_request: "https://gitlab.example.com/platform/specforge/-/merge_requests/42/diffs"
+    });
+
+    expect(calls).toEqual([["api", "projects/platform%2Fspecforge/merge_requests/42"]]);
+    expect(result.provider).toBe("gitlab");
+    expect(result.number).toBe(42);
+  });
+
+  it("omits pipeline checks when GitLab does not return a recognized pipeline status", async () => {
+    const provider = createGitLabProvider({
+      exec: async () => ({
+        stdout: JSON.stringify({
+          iid: 42,
+          web_url: "https://gitlab.com/gitlab-org/cli/-/merge_requests/42",
+          title: "feat: implement task flow",
+          state: "opened",
+          draft: false,
+          detailed_merge_status: "mergeable",
+          source_branch: "feat/task-1",
+          target_branch: "main",
+          description: "",
+          head_pipeline: {}
+        }),
+        stderr: ""
+      })
+    });
+
+    const result = await provider.getPullRequestStatus({
+      pull_request: "https://gitlab.com/gitlab-org/cli/-/merge_requests/42"
+    });
+
+    expect(result.overall_status).toBe("no_checks");
+    expect(result.status_checks).toEqual([]);
+  });
+
   it("rejects non-positive or non-integer merge request iids from GitLab output", async () => {
     const provider = createGitLabProvider({
       exec: async () => ({

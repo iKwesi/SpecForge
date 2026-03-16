@@ -16,6 +16,8 @@ import {
 
 const execFileAsync = promisify(execFile);
 
+const GITLAB_MERGE_REQUEST_PATH_PATTERN = /^\/(.+)\/-\/merge_requests\/(\d+)(?:\/.*)?$/;
+
 export type GitLabProviderErrorCode =
   | "provider_unavailable"
   | "invalid_repository"
@@ -283,6 +285,10 @@ function readStatusChecks(value: unknown): IssueTrackerStatusCheck[] {
   }
 
   const pipelineStatus = normalizePipelineStatus(readOptionalString(value.status));
+  if (!pipelineStatus) {
+    return [];
+  }
+
   const detailsUrl = readOptionalString(value.web_url);
   return [
     {
@@ -298,7 +304,7 @@ function readStatusChecks(value: unknown): IssueTrackerStatusCheck[] {
 function normalizePipelineStatus(value: string | undefined): {
   status: IssueTrackerStatusCheckStatus;
   conclusion: IssueTrackerStatusCheckConclusion;
-} {
+} | undefined {
   switch ((value ?? "").toLowerCase()) {
     case "success":
       return { status: "completed", conclusion: "success" };
@@ -321,7 +327,7 @@ function normalizePipelineStatus(value: string | undefined): {
     case "scheduled":
       return { status: "queued", conclusion: "pending" };
     default:
-      return { status: "completed", conclusion: "unknown" };
+      return undefined;
   }
 }
 
@@ -353,7 +359,7 @@ function parseGitLabMergeRequestUrl(
 ): { repository: string; iid: string } | undefined {
   try {
     const url = new URL(value);
-    const match = url.pathname.match(/^\/(.+)\/-\/merge_requests\/(\d+)\/?$/);
+    const match = url.pathname.match(GITLAB_MERGE_REQUEST_PATH_PATTERN);
     if (!match) {
       return undefined;
     }
