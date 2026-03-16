@@ -90,16 +90,17 @@ export function createGitLabProvider(input: {
         url: readString(parsed.web_url, "merge request url"),
         head_branch: readString(parsed.source_branch, "head branch"),
         base_branch: readString(parsed.target_branch, "base branch"),
-        linked_issue_numbers: extractLinkedIssueNumbers(readOptionalString(parsed.description) ?? description)
+        linked_issue_numbers: extractLinkedIssueNumbers(
+          normalizeOptionalBody(parsed.description) ?? description
+        )
       };
     },
     async getPullRequestStatus(
       input: GetPullRequestStatusInput
     ): Promise<IssueTrackerPullRequestStatus> {
-      const repository = input.repository ?? parseGitLabMergeRequestUrl(input.pull_request)?.repository;
-      const mergeRequestIid = isGitLabMergeRequestUrl(input.pull_request)
-        ? parseGitLabMergeRequestUrl(input.pull_request)?.iid
-        : input.pull_request;
+      const parsedMergeRequestUrl = parseGitLabMergeRequestUrl(input.pull_request);
+      const repository = input.repository ?? parsedMergeRequestUrl?.repository;
+      const mergeRequestIid = parsedMergeRequestUrl?.iid ?? input.pull_request;
 
       if (!repository) {
         throw new GitLabProviderError(
@@ -175,7 +176,7 @@ async function runGlabCommand(exec: GitLabExec, args: string[]): Promise<ExecRes
 }
 
 function ensureGitLabProjectPath(value: string): void {
-  ensureNonEmpty(value, "repository");
+  ensureNonEmpty(value, "repository", "invalid_repository");
   const segments = value.split("/");
   if (segments.length < 2 || segments.some((segment) => segment.trim().length === 0)) {
     throw new GitLabProviderError(
@@ -185,9 +186,13 @@ function ensureGitLabProjectPath(value: string): void {
   }
 }
 
-function ensureNonEmpty(value: string | undefined, field: string): asserts value is string {
+function ensureNonEmpty(
+  value: string | undefined,
+  field: string,
+  code: GitLabProviderErrorCode = "invalid_pull_request"
+): asserts value is string {
   if (typeof value !== "string" || value.trim().length === 0) {
-    throw new GitLabProviderError("invalid_pull_request", `${field} must be non-empty.`);
+    throw new GitLabProviderError(code, `${field} must be non-empty.`);
   }
 }
 
@@ -344,19 +349,11 @@ function extractLinkedIssueNumbers(body: string): number[] {
   return [...linkedIssueNumbers].sort((left, right) => left - right);
 }
 
-function isGitLabMergeRequestUrl(value: string): boolean {
-  return parseGitLabMergeRequestUrl(value) !== undefined;
-}
-
 function parseGitLabMergeRequestUrl(
   value: string
 ): { repository: string; iid: string } | undefined {
   try {
     const url = new URL(value);
-    if (url.hostname !== "gitlab.com") {
-      return undefined;
-    }
-
     const match = url.pathname.match(/^\/(.+)\/-\/merge_requests\/(\d+)\/?$/);
     if (!match) {
       return undefined;
@@ -375,6 +372,14 @@ function parseGitLabMergeRequestUrl(
   } catch {
     return undefined;
   }
+}
+
+function normalizeOptionalBody(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+
+  return value.trim().length > 0 ? value : undefined;
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {

@@ -17,6 +17,12 @@ describe("issue tracker provider resolution", () => {
     ).toBe("gitlab");
   });
 
+  it("infers gitlab from self-managed merge request URLs", () => {
+    expect(
+      inferIssueTrackerProviderName("https://gitlab.example.com/platform/specforge/-/merge_requests/42")
+    ).toBe("gitlab");
+  });
+
   it("returns the injected gitlab provider when explicitly requested", () => {
     const gitlabProvider: IssueTrackerProvider = {
       name: "gitlab",

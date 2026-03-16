@@ -40,12 +40,12 @@ export function inferIssueTrackerProviderName(
     return "github";
   }
 
+  if (isGitLabMergeRequestUrl(pullRequestRef)) {
+    return "gitlab";
+  }
+
   try {
     const url = new URL(pullRequestRef);
-    if (url.hostname === "gitlab.com" && url.pathname.includes("/-/merge_requests/")) {
-      return "gitlab";
-    }
-
     if (url.hostname === "github.com" && url.pathname.includes("/pull/")) {
       return "github";
     }
@@ -100,4 +100,13 @@ export function adaptGitHubProvider(provider: GitHubProvider): IssueTrackerProvi
       };
     }
   };
+}
+
+function isGitLabMergeRequestUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return /\/-\/merge_requests\/\d+\/?$/.test(url.pathname);
+  } catch {
+    return false;
+  }
 }

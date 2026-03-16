@@ -26,7 +26,10 @@ import {
   type StatusResult
 } from "./core/diagnostics/status.js";
 import { createWebhookStatusNotifier } from "./core/notifiers/statusNotifiers.js";
-import { ISSUE_TRACKER_PROVIDER_NAMES } from "./core/trackers/contracts.js";
+import {
+  ISSUE_TRACKER_PROVIDER_NAMES,
+  type IssueTrackerProviderName
+} from "./core/trackers/contracts.js";
 
 interface CliWriter {
   write(chunk: string): boolean | void;
@@ -349,16 +352,20 @@ function collectOptionValues(value: string, previous: string[]): string[] {
 
 function normalizeIssueTrackerProvider(
   value: string | undefined
-): "github" | "gitlab" | undefined {
+): IssueTrackerProviderName | undefined {
   if (value === undefined) {
     return undefined;
   }
 
-  if (ISSUE_TRACKER_PROVIDER_NAMES.includes(value as "github" | "gitlab")) {
-    return value as "github" | "gitlab";
+  if (isIssueTrackerProviderName(value)) {
+    return value;
   }
 
   throw new Error(
     `provider must be one of ${ISSUE_TRACKER_PROVIDER_NAMES.join(", ")}.`
   );
+}
+
+function isIssueTrackerProviderName(value: string): value is IssueTrackerProviderName {
+  return ISSUE_TRACKER_PROVIDER_NAMES.includes(value as IssueTrackerProviderName);
 }
