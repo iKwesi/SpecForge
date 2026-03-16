@@ -93,6 +93,31 @@ describe("status notifier adapters", () => {
       })
     );
   });
+
+  it("accepts valid webhook urls even when copy-pasted with surrounding whitespace", async () => {
+    const calls: string[] = [];
+    const notifier = createWebhookStatusNotifier({
+      webhook_url: "  https://hooks.example.test/specforge  ",
+      fetch: async (url) => {
+        calls.push(String(url));
+        return new Response(null, { status: 204 });
+      }
+    });
+
+    const deliveries = await emitStatusNotification({
+      pull_request: buildPullRequestStatus(),
+      notifiers: [notifier]
+    });
+
+    expect(deliveries).toEqual([
+      {
+        adapter_id: "webhook",
+        delivery_status: "delivered",
+        message: "Status event delivered."
+      }
+    ]);
+    expect(calls).toEqual(["https://hooks.example.test/specforge"]);
+  });
 });
 
 function buildPullRequestStatus(): GitHubPullRequestStatus {

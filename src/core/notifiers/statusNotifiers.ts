@@ -128,10 +128,11 @@ function normalizeWebhookUrl(value: string): string {
       "webhook_url must be a non-empty http(s) URL."
     );
   }
+  const trimmed = value.trim();
 
   let url: URL;
   try {
-    url = new URL(value);
+    url = new URL(trimmed);
   } catch (error) {
     throw new StatusNotifierError(
       "invalid_notifier",
