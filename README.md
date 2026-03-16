@@ -229,7 +229,9 @@ src/
     execution/               scheduler and workspace isolation
     skills/                  registry, built-ins, selection, external adapters
     trackers/                provider-agnostic issue-tracker contracts
-    github/ gitlab/          provider implementations
+    git/                     native git provider abstractions
+    github/                  GitHub issue-tracker provider
+    gitlab/                  GitLab issue-tracker provider
     notifiers/               outbound status notification adapters
   demo/                      Golden demo orchestration
 
