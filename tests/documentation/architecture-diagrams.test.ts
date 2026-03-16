@@ -106,10 +106,7 @@ function buildRepoProfile(repositoryRoot: string): RepoProfileArtifact {
         "src/cli/main.ts",
         "tests/api/routes.test.ts"
       ],
-      extension_counts: [
-        { extension: ".test.ts", count: 1 },
-        { extension: ".ts", count: 3 }
-      ],
+      extension_counts: [{ extension: ".ts", count: 4 }],
       detected_manifests: ["package.json"],
       detected_tooling: ["node", "typescript", "vitest"]
     }
