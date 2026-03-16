@@ -55,5 +55,6 @@ That generated section is derived from:
 
 The generated snapshot is intended to keep repository-specific subsystem boundaries aligned with:
 - inspect evidence refs
+- generated Mermaid system-context and subsystem-relationship diagrams
 - artifact contracts
 - artifact flow between profiling, architecture mapping, and maintained documentation

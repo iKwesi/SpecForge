@@ -26,14 +26,19 @@ function buildRepoProfile(repositoryRoot: string): RepoProfileArtifact {
     repository_root: repositoryRoot,
     scan: {
       max_files: 200,
-      scanned_file_count: 3,
+      scanned_file_count: 4,
       truncated: false,
       ignored_directories: [".git", ".specforge"]
     },
     evidence: {
       top_level_entries: ["README.md", "docs", "src"],
-      sampled_files: ["src/api/routes.ts", "src/api/service.ts", "src/cli/main.ts"],
-      extension_counts: [{ extension: ".ts", count: 3 }],
+      sampled_files: [
+        "src/api/routes.ts",
+        "src/api/service.ts",
+        "src/cli/main.ts",
+        "tests/api/routes.test.ts"
+      ],
+      extension_counts: [{ extension: ".ts", count: 4 }],
       detected_manifests: ["package.json"],
       detected_tooling: ["node", "typescript", "vitest"]
     }
@@ -68,6 +73,14 @@ function buildArchitectureSummary(repositoryRoot: string): ArchitectureSummaryAr
         inferred_responsibility: "CLI entrypoints",
         file_count: 1,
         evidence_refs: ["src/cli/main.ts"],
+        uncertainty: "medium"
+      },
+      {
+        id: "tests/api",
+        label: "tests/api",
+        inferred_responsibility: "Test coverage",
+        file_count: 1,
+        evidence_refs: ["tests/api/routes.test.ts"],
         uncertainty: "medium"
       }
     ],
@@ -187,13 +200,23 @@ describe("updateArchitectureDocs success paths", () => {
     expect(result.architecture_docs_path).toBe(join(repoRoot, "docs", "ARCHITECTURE.md"));
     expect(result.architecture_summary_markdown).toContain("# Architecture Summary");
     expect(result.architecture_summary_markdown).toContain("## Artifact Flow");
+    expect(result.architecture_summary_markdown).toContain("## System Context Diagram");
+    expect(result.architecture_summary_markdown).toContain("## Subsystem Relationship Diagram");
     expect(result.architecture_summary_markdown).toContain("operation.profileRepository");
     expect(result.architecture_summary_markdown).toContain("src/api/routes.ts");
+    expect(result.architecture_summary_markdown).toMatch(
+      /src_cli__[a-z0-9]{6} --> src_api__[a-z0-9]{6}/
+    );
+    expect(result.architecture_summary_markdown).toMatch(
+      /tests_api__[a-z0-9]{6} -.-> src_api__[a-z0-9]{6}/
+    );
 
     const docsContent = await readFile(result.architecture_docs_path, "utf8");
     expect(docsContent).toContain("Manual overview.");
     expect(docsContent).toContain("<!-- specforge:begin generated-architecture -->");
     expect(docsContent).toContain("## Repository Evidence Snapshot");
+    expect(docsContent).toContain("## System Context Diagram");
+    expect(docsContent).toContain("## Subsystem Relationship Diagram");
     expect(docsContent).toContain("### Subsystem: src/api");
     expect(docsContent).toContain("### Contracts");
     expect(docsContent).toContain("### Artifact Flow");

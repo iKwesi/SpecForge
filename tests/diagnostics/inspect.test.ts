@@ -192,8 +192,14 @@ describe("runInspect success paths", () => {
     expect(await readFile(result.architecture_summary_markdown_path!, "utf8")).toContain(
       "## Artifact Flow"
     );
+    expect(await readFile(result.architecture_summary_markdown_path!, "utf8")).toContain(
+      "## System Context Diagram"
+    );
     expect(await readFile(result.architecture_docs_path!, "utf8")).toContain(
       "<!-- specforge:begin generated-architecture -->"
+    );
+    expect(await readFile(result.architecture_docs_path!, "utf8")).toContain(
+      "## Subsystem Relationship Diagram"
     );
 
     const report = formatInspectReport(result);

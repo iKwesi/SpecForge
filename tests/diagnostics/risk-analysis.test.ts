@@ -166,10 +166,7 @@ function createRepoProfile(input: { sampled_files: string[] }): RepoProfileArtif
     evidence: {
       top_level_entries: ["src", "tests"],
       sampled_files: input.sampled_files,
-      extension_counts: [
-        { extension: ".test.ts", count: 1 },
-        { extension: ".ts", count: input.sampled_files.length - 1 }
-      ],
+      extension_counts: [{ extension: ".ts", count: input.sampled_files.length }],
       detected_manifests: ["package.json", "tsconfig.json"],
       detected_tooling: ["node", "typescript"]
     }

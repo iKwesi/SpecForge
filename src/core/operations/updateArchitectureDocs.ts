@@ -4,6 +4,7 @@ import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { createDryRunReport, type DryRunReport } from "../contracts/dryRun.js";
 import type { ProjectMode } from "../contracts/domain.js";
 import type { OperationContract } from "../contracts/operation.js";
+import { renderArchitectureDiagramsMarkdown } from "./architectureDiagrams.js";
 import type { ArchitectureSummaryArtifact } from "./mapArchitectureFromRepo.js";
 import type { RepoProfileArtifact } from "./profileRepository.js";
 
@@ -70,6 +71,7 @@ export const UPDATE_ARCHITECTURE_DOCS_OPERATION_CONTRACT: OperationContract<
   ],
   invariants: [
     "Generated architecture docs are derived only from repo_profile and architecture_summary inputs.",
+    "Generated architecture docs include deterministic system-context and subsystem-relationship diagrams.",
     "Managed architecture doc sections preserve surrounding manual content.",
     "Evidence references remain visible in both summary markdown and maintained docs."
   ],
@@ -282,6 +284,12 @@ function renderArchitectureSummaryMarkdown(
     parts.push(architectureSummary.summary_markdown.trimEnd());
   }
 
+  const diagramsSection = renderArchitectureDiagramsMarkdown(repoProfile, architectureSummary);
+  if (parts.length > 0) {
+    parts.push("");
+  }
+  parts.push(diagramsSection);
+
   const evidenceSection = renderEvidenceSection(repoProfile, architectureSummary);
   if (evidenceSection.trim().length > 0) {
     if (parts.length > 0) {
@@ -308,9 +316,14 @@ function renderManagedGeneratedSection(
   repoProfile: RepoProfileArtifact,
   architectureSummary: ArchitectureSummaryArtifact
 ): string {
+  const diagramsSection = renderArchitectureDiagramsMarkdown(repoProfile, architectureSummary);
+  const evidenceSection = renderEvidenceSection(repoProfile, architectureSummary);
+
   return [
     GENERATED_SECTION_START,
-    renderEvidenceSection(repoProfile, architectureSummary),
+    diagramsSection,
+    "",
+    evidenceSection,
     GENERATED_SECTION_END
   ].join("\n");
 }
