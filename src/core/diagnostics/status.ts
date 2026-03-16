@@ -4,13 +4,21 @@ import {
   type GitHubProvider,
   type GitHubPullRequestStatus
 } from "../github/provider.js";
+import {
+  emitStatusNotification,
+  type StatusNotificationDelivery,
+  type StatusNotifier
+} from "../notifiers/statusNotifiers.js";
 
 export interface RunStatusInput extends GetPullRequestStatusInput {
   github_provider?: GitHubProvider;
+  notifiers?: StatusNotifier[];
+  emitted_at?: Date;
 }
 
 export interface StatusResult {
   pull_request: GitHubPullRequestStatus;
+  notification_deliveries?: StatusNotificationDelivery[];
 }
 
 /**
@@ -25,9 +33,19 @@ export async function runStatus(input: RunStatusInput): Promise<StatusResult> {
     pull_request: input.pull_request,
     ...(input.repository ? { repository: input.repository } : {})
   });
+  const notificationDeliveries =
+    input.notifiers && input.notifiers.length > 0
+      ? await emitStatusNotification({
+          pull_request: pullRequest,
+          ...(input.repository ? { repository: input.repository } : {}),
+          ...(input.emitted_at ? { emitted_at: input.emitted_at } : {}),
+          notifiers: input.notifiers
+        })
+      : undefined;
 
   return {
-    pull_request: pullRequest
+    pull_request: pullRequest,
+    ...(notificationDeliveries ? { notification_deliveries: notificationDeliveries } : {})
   };
 }
 
@@ -59,6 +77,19 @@ export function formatStatusReport(result: StatusResult): string {
       lines.push(
         `- ${statusCheck.name} [${statusCheck.type}] ${statusCheck.status}/${statusCheck.conclusion}`
       );
+    }
+  }
+
+  if (result.notification_deliveries) {
+    lines.push("", "Notifications");
+    if (result.notification_deliveries.length === 0) {
+      lines.push("- none");
+    } else {
+      for (const delivery of result.notification_deliveries) {
+        lines.push(
+          `- ${delivery.adapter_id} ${delivery.delivery_status}: ${delivery.message}`
+        );
+      }
     }
   }
 

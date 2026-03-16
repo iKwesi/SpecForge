@@ -25,6 +25,7 @@ import {
   type RunStatusInput,
   type StatusResult
 } from "./core/diagnostics/status.js";
+import { createWebhookStatusNotifier } from "./core/notifiers/statusNotifiers.js";
 
 interface CliWriter {
   write(chunk: string): boolean | void;
@@ -194,21 +195,38 @@ The command reads artifact inputs and optional policy/schedule context, then pri
     .description("Report GitHub pull request state and CI outcomes. Example: specforge status --repo iKwesi/SpecForge --pr 123")
     .requiredOption("--pr <ref>", "Pull request number, URL, or branch to inspect")
     .option("--repo <owner/repo>", "GitHub repository slug when --pr is not a pull request URL")
+    .option(
+      "--notify-webhook <url>",
+      "Emit the status event to a webhook; delivery failures are reported without failing the status command, but invalid webhook configuration is still an error",
+      collectOptionValues,
+      []
+    )
     .addHelpText(
       "after",
       `
 Examples:
   $ specforge status --repo iKwesi/SpecForge --pr 123
   $ specforge status --pr https://github.com/iKwesi/SpecForge/pull/123
+  $ specforge status --repo iKwesi/SpecForge --pr 123 --notify-webhook https://hooks.example.test/specforge
 
 Use this after PR handoff when you need the latest GitHub merge state and status checks.
 `
     )
-    .action(async (options: { pr: string; repo?: string }) => {
+    .action(async (options: { pr: string; repo?: string; notifyWebhook: string[] }) => {
       try {
         const result = await statusRunner({
           pull_request: options.pr,
           ...(options.repo ? { repository: options.repo } : {}),
+          ...(options.notifyWebhook.length > 0
+            ? {
+                notifiers: options.notifyWebhook.map((webhookUrl, index) =>
+                  createWebhookStatusNotifier({
+                    webhook_url: webhookUrl,
+                    adapter_id: options.notifyWebhook.length > 1 ? `webhook-${index + 1}` : "webhook"
+                  })
+                )
+              }
+            : {}),
           ...(statusInput ?? {})
         });
 
