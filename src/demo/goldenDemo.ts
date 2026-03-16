@@ -554,6 +554,8 @@ async function captureSuccessfulCli(
 function buildSimulatedStatusResult(): StatusResult {
   return {
     pull_request: {
+      provider: "github",
+      request_kind: "pull_request",
       number: 38,
       url: "https://github.com/iKwesi/SpecForge/pull/38",
       title: "demo: golden workflow baseline",

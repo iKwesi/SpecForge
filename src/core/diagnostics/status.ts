@@ -1,9 +1,10 @@
 import {
-  createGitHubProvider,
+  createIssueTrackerProvider,
   type GetPullRequestStatusInput,
-  type GitHubProvider,
-  type GitHubPullRequestStatus
-} from "../github/provider.js";
+  type IssueTrackerProvider,
+  type IssueTrackerProviderName,
+  type IssueTrackerPullRequestStatus
+} from "../trackers/provider.js";
 import {
   emitStatusNotification,
   type StatusNotificationDelivery,
@@ -11,24 +12,30 @@ import {
 } from "../notifiers/statusNotifiers.js";
 
 export interface RunStatusInput extends GetPullRequestStatusInput {
-  github_provider?: GitHubProvider;
+  provider?: IssueTrackerProviderName;
+  issue_tracker_provider?: IssueTrackerProvider;
   notifiers?: StatusNotifier[];
   emitted_at?: Date;
 }
 
 export interface StatusResult {
-  pull_request: GitHubPullRequestStatus;
+  pull_request: IssueTrackerPullRequestStatus;
   notification_deliveries?: StatusNotificationDelivery[];
 }
 
 /**
- * Report the current GitHub pull request status using the configured provider.
+ * Report the current review-request status using the configured issue tracker provider.
  *
- * This stays intentionally narrow for v1: it reads pull request state and status
- * checks without trying to infer broader run orchestration from GitHub alone.
+ * This stays intentionally narrow for v1: it reads review-request state and status
+ * checks without trying to infer broader run orchestration from the tracker alone.
  */
 export async function runStatus(input: RunStatusInput): Promise<StatusResult> {
-  const provider = input.github_provider ?? createGitHubProvider();
+  const provider =
+    input.issue_tracker_provider ??
+    createIssueTrackerProvider({
+      ...(input.provider ? { provider: input.provider } : {}),
+      pull_request: input.pull_request
+    });
   const pullRequest = await provider.getPullRequestStatus({
     pull_request: input.pull_request,
     ...(input.repository ? { repository: input.repository } : {})
@@ -50,10 +57,14 @@ export async function runStatus(input: RunStatusInput): Promise<StatusResult> {
 }
 
 export function formatStatusReport(result: StatusResult): string {
+  const requestLabel =
+    result.pull_request.request_kind === "merge_request" ? "Merge Request" : "Pull Request";
   const lines = [
     "SpecForge Status",
     "",
-    `Pull Request: #${result.pull_request.number}`,
+    `Provider: ${result.pull_request.provider}`,
+    `Request Kind: ${result.pull_request.request_kind}`,
+    `${requestLabel}: #${result.pull_request.number}`,
     `URL: ${result.pull_request.url}`,
     `Title: ${result.pull_request.title}`,
     `State: ${result.pull_request.state}`,

@@ -5,7 +5,7 @@ import {
   createWebhookStatusNotifier,
   emitStatusNotification
 } from "../../src/core/notifiers/statusNotifiers.js";
-import type { GitHubPullRequestStatus } from "../../src/core/github/provider.js";
+import type { IssueTrackerPullRequestStatus } from "../../src/core/trackers/provider.js";
 
 describe("status notifier adapters", () => {
   it("posts pull request status events to a webhook adapter", async () => {
@@ -202,8 +202,10 @@ describe("status notifier adapters", () => {
   });
 });
 
-function buildPullRequestStatus(): GitHubPullRequestStatus {
+function buildPullRequestStatus(): IssueTrackerPullRequestStatus {
   return {
+    provider: "github",
+    request_kind: "pull_request",
     number: 123,
     url: "https://github.com/iKwesi/SpecForge/pull/123",
     title: "feat: implement task flow",

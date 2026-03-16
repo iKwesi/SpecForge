@@ -26,6 +26,10 @@ import {
   type StatusResult
 } from "./core/diagnostics/status.js";
 import { createWebhookStatusNotifier } from "./core/notifiers/statusNotifiers.js";
+import {
+  ISSUE_TRACKER_PROVIDER_NAMES,
+  type IssueTrackerProviderName
+} from "./core/trackers/contracts.js";
 
 interface CliWriter {
   write(chunk: string): boolean | void;
@@ -88,7 +92,7 @@ Examples:
     Explain an artifact using deterministic evidence from related inputs.
 
   $ specforge status --repo iKwesi/SpecForge --pr 123
-    Report pull request state and CI outcomes from GitHub.
+    Report review-request state and CI outcomes from the configured issue tracker.
 
 Workflow guide:
   1. Run 'specforge doctor' before making changes to confirm your environment is ready.
@@ -99,7 +103,7 @@ Workflow guide:
 Artifacts:
   - 'inspect' writes repository profile and architecture summary artifacts.
   - 'explain' reads one or more artifact files plus optional policy/schedule evidence.
-  - 'status' reads pull request state and status checks from GitHub.
+  - 'status' reads review-request state and status checks from the configured issue tracker.
   - 'doctor' reports readiness and exits non-zero when blocking issues are found.
 `
     );
@@ -192,9 +196,19 @@ The command reads artifact inputs and optional policy/schedule context, then pri
 
   program
     .command("status")
-    .description("Report GitHub pull request state and CI outcomes. Example: specforge status --repo iKwesi/SpecForge --pr 123")
-    .requiredOption("--pr <ref>", "Pull request number, URL, or branch to inspect")
-    .option("--repo <owner/repo>", "GitHub repository slug when --pr is not a pull request URL")
+    .description("Report issue-tracker review request state and CI outcomes. Example: specforge status --repo iKwesi/SpecForge --pr 123")
+    .requiredOption(
+      "--pr <ref>",
+      "GitHub: pull request number, URL, or branch. GitLab: merge request number or URL."
+    )
+    .option(
+      "--repo <path>",
+      "Issue tracker repository/project path when --pr is not a review request URL"
+    )
+    .option(
+      "--provider <name>",
+      `Issue tracker provider (${ISSUE_TRACKER_PROVIDER_NAMES.join(" or ")})`
+    )
     .option(
       "--notify-webhook <url>",
       "Emit the status event to a webhook; delivery failures are reported without failing the status command, but invalid webhook configuration is still an error",
@@ -207,16 +221,22 @@ The command reads artifact inputs and optional policy/schedule context, then pri
 Examples:
   $ specforge status --repo iKwesi/SpecForge --pr 123
   $ specforge status --pr https://github.com/iKwesi/SpecForge/pull/123
+  $ specforge status --repo iKwesi/SpecForge --pr feat/task-1
+  $ specforge status --provider gitlab --repo gitlab-org/cli --pr 42
   $ specforge status --repo iKwesi/SpecForge --pr 123 --notify-webhook https://hooks.example.test/specforge
 
-Use this after PR handoff when you need the latest GitHub merge state and status checks.
+Use this after handoff when you need the latest review-request merge state and status checks.
+GitHub accepts pull request numbers, URLs, or branch refs when --repo is provided.
+GitLab accepts merge request numbers or merge request URLs.
 `
     )
-    .action(async (options: { pr: string; repo?: string; notifyWebhook: string[] }) => {
+    .action(async (options: { pr: string; repo?: string; provider?: string; notifyWebhook: string[] }) => {
       try {
+        const provider = normalizeIssueTrackerProvider(options.provider);
         const result = await statusRunner({
           pull_request: options.pr,
           ...(options.repo ? { repository: options.repo } : {}),
+          ...(provider ? { provider } : {}),
           ...(options.notifyWebhook.length > 0
             ? {
                 notifiers: options.notifyWebhook.map((webhookUrl, index) =>
@@ -334,4 +354,24 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
 
 function collectOptionValues(value: string, previous: string[]): string[] {
   return [...previous, value];
+}
+
+function normalizeIssueTrackerProvider(
+  value: string | undefined
+): IssueTrackerProviderName | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (isIssueTrackerProviderName(value)) {
+    return value;
+  }
+
+  throw new Error(
+    `provider must be one of ${ISSUE_TRACKER_PROVIDER_NAMES.join(", ")}.`
+  );
+}
+
+function isIssueTrackerProviderName(value: string): value is IssueTrackerProviderName {
+  return ISSUE_TRACKER_PROVIDER_NAMES.includes(value as IssueTrackerProviderName);
 }
