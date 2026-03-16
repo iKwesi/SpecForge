@@ -1,4 +1,4 @@
-import type { GitHubPullRequestStatus } from "../github/provider.js";
+import type { IssueTrackerPullRequestStatus } from "../trackers/provider.js";
 
 export type StatusNotifierErrorCode = "invalid_notifier" | "delivery_failed";
 
@@ -18,7 +18,7 @@ export interface PullRequestStatusNotificationEvent {
   event_kind: "pull_request_status";
   emitted_at: string;
   repository?: string;
-  pull_request: GitHubPullRequestStatus;
+  pull_request: IssueTrackerPullRequestStatus;
 }
 
 export type StatusNotificationEvent = PullRequestStatusNotificationEvent;
@@ -35,7 +35,7 @@ export interface StatusNotificationDelivery {
 }
 
 export interface EmitStatusNotificationInput {
-  pull_request: GitHubPullRequestStatus;
+  pull_request: IssueTrackerPullRequestStatus;
   repository?: string;
   emitted_at?: Date;
   notifiers: StatusNotifier[];

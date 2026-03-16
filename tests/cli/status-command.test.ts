@@ -6,6 +6,8 @@ import type { StatusResult } from "../../src/core/diagnostics/status.js";
 function buildStatusResult(): StatusResult {
   return {
     pull_request: {
+      provider: "github",
+      request_kind: "pull_request",
       number: 123,
       url: "https://github.com/iKwesi/SpecForge/pull/123",
       title: "feat: implement task flow",
@@ -104,5 +106,57 @@ describe("sf status command", () => {
 
     expect(exitCode).toBe(1);
     expect(stderr).toContain("status failed");
+  });
+
+  it("passes the requested issue tracker provider through to the status runner", async () => {
+    let receivedInput:
+      | { provider?: string; repository?: string; pull_request: string }
+      | undefined;
+
+    const exitCode = await runCli(
+      [
+        "node",
+        "sf",
+        "status",
+        "--provider",
+        "gitlab",
+        "--repo",
+        "gitlab-org/cli",
+        "--pr",
+        "42"
+      ],
+      {
+        status_runner: async (input) => {
+          receivedInput = {
+            pull_request: input.pull_request,
+            ...(input.provider ? { provider: input.provider } : {}),
+            ...(input.repository ? { repository: input.repository } : {})
+          };
+          return {
+            pull_request: {
+              provider: "gitlab",
+              request_kind: "merge_request",
+              number: 42,
+              url: "https://gitlab.com/gitlab-org/cli/-/merge_requests/42",
+              title: "feat: implement task flow",
+              state: "open",
+              merge_state_status: "clean",
+              head_branch: "feat/task-1",
+              base_branch: "main",
+              linked_issue_numbers: [],
+              overall_status: "success",
+              status_checks: []
+            }
+          };
+        }
+      }
+    );
+
+    expect(exitCode).toBe(0);
+    expect(receivedInput).toEqual({
+      provider: "gitlab",
+      repository: "gitlab-org/cli",
+      pull_request: "42"
+    });
   });
 });
