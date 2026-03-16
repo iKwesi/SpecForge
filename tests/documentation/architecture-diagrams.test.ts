@@ -58,6 +58,25 @@ describe("architecture diagram generation", () => {
     expect(markdown).toContain("src/api&lt;core&gt;<br/>API &amp; &quot;backend&quot; &lt;surface&gt;");
     expect(markdown).not.toContain('src/api<core><br/>API & "backend" <surface>');
   });
+
+  it("always emits fixed-width hash suffixes for mermaid node ids", () => {
+    const repoProfile = buildRepoProfile("/workspace/specforge");
+    const architectureSummary = buildArchitectureSummary("/workspace/specforge");
+    architectureSummary.subsystems = [
+      {
+        id: "a",
+        label: "a",
+        inferred_responsibility: "General subsystem",
+        file_count: 1,
+        evidence_refs: ["a.ts"],
+        uncertainty: "medium"
+      }
+    ];
+
+    const markdown = renderArchitectureDiagramsMarkdown(repoProfile, architectureSummary);
+
+    expect(markdown).toMatch(/a__[a-z0-9]{6}\["a<br\/>General subsystem"]/);
+  });
 });
 
 function buildRepoProfile(repositoryRoot: string): RepoProfileArtifact {

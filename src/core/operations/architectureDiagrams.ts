@@ -179,7 +179,8 @@ function toMermaidNodeId(value: string): string {
   const normalized = value.replace(/[^A-Za-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   const base =
     normalized.length === 0 ? "node" : /^[0-9]/.test(normalized) ? `n_${normalized}` : normalized;
-  const hashSuffix = stableMermaidIdHash(value).slice(0, 6);
+  const rawHash = stableMermaidIdHash(value);
+  const hashSuffix = rawHash.padStart(6, "0").slice(0, 6);
 
   return `${base}__${hashSuffix}`;
 }
